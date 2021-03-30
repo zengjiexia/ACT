@@ -10,10 +10,10 @@ class SimPullAnalysis:
 
     def __init__(self, data_path):
         self.path_program = os.path.dirname(__file__)
-        self.path_data_main = path
+        self.path_data_main = data_path
 
         # Construct dirs for results
-        self.path_result_main = path + '_results'
+        self.path_result_main = data_path + '_results'
         if os.path.isdir(self.path_result_main) != 1:
             os.mkdir(self.path_result_main)
         self.path_result_raw = os.path.join(self.path_result_main, 'raw')
@@ -42,7 +42,7 @@ class SimPullAnalysis:
 
     def call_ComDet(self, size, SD):
         # *Use path_result_raw
-        path_fiji = os.path.join(self.path_program, 'Fiji.app/ImageJ-win64.exe')
+        path_fiji = os.path.join(self.path_program, 'Fiji.app')
         path_macro = os.path.join(self.path_program, 'fiji_macro_v2.py')
 
         try:
@@ -53,8 +53,8 @@ class SimPullAnalysis:
 
 
     def call_ComDet_2(self, size, SD):
-        path_fiji = os.path.join(self.path_program, 'Fiji.app/ImageJ-win64.exe')
-        imagej.init(path_fiji)
+        path_fiji = os.path.join(self.path_program, 'Fiji.app')
+        imagej.init(path_fiji, headless=False)
 
         def extract_FoV(path):
             """
@@ -69,7 +69,7 @@ class SimPullAnalysis:
                         fov_path[file[:10]] = os.path.join(root, file)
             return fov_path
 
-        fov_paths = extract_FoV(datapath)
+        #fov_paths = extract_FoV(datapath)
         """
         for field in sorted(fov_paths):
 
