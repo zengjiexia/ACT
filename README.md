@@ -13,15 +13,13 @@ Requirements
 - Python 3 (tested with Python 3.6-3.9)
 	- os
 	- sys
-	- shutil
-	- subprocess
 	- re
 	- pandas
 	- seaborn
 	- matplotlib
 	- PySide 6
 	- [pyqtgraph](https://github.com/pyqtgraph/pyqtgraph)
-
+    - pyimagej (install with conda-forge)
 
 - [Fiji(is just imagej)](https://imagej.net/Fiji) 
 	- [ComDet](https://github.com/ekatrukha/ComDet)
