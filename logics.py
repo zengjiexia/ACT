@@ -10,10 +10,10 @@ class SimPullAnalysis:
 
     def __init__(self, data_path):
         self.path_program = os.path.dirname(__file__)
-        self.path_data_main = path
+        self.path_data_main = data_path
 
         # Construct dirs for results
-        self.path_result_main = path + '_results'
+        self.path_result_main = data_path + '_results'
         if os.path.isdir(self.path_result_main) != 1:
             os.mkdir(self.path_result_main)
         self.path_result_raw = os.path.join(self.path_result_main, 'raw')
