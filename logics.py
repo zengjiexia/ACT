@@ -149,6 +149,6 @@ if __name__ == "__main__":
     size = input('Please input the estimated size of particles(in pixels):\n')
     threshold = input('Please input the threshold to apply(in nSD):\n')
     print('Picking up particles in Fiji...')
-    project.call_ComDet(size=size, SD=threshold)
+    project.call_ComDet_2(size=size, SD=threshold)
     print('Generating reports...')
     project.generate_reports()
