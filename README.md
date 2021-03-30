@@ -21,7 +21,7 @@ Requirements
 	- matplotlib
 	- PySide 6
 	- [pyqtgraph](https://github.com/pyqtgraph/pyqtgraph)
-
+    - pyimagej (install with conda-forge)
 
 - [Fiji(is just imagej)](https://imagej.net/Fiji) 
 	- [ComDet](https://github.com/ekatrukha/ComDet)
