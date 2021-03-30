@@ -1,6 +1,6 @@
 import os
-import subprocess
 import re
+from tqdm import tqdm
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -10,10 +10,10 @@ class SimPullAnalysis:
 
     def __init__(self, data_path):
         self.path_program = os.path.dirname(__file__)
-        self.path_data_main = path
+        self.path_data_main = data_path
 
         # Construct dirs for results
-        self.path_result_main = path + '_results'
+        self.path_result_main = data_path + '_results'
         if os.path.isdir(self.path_result_main) != 1:
             os.mkdir(self.path_result_main)
         self.path_result_raw = os.path.join(self.path_result_main, 'raw')
@@ -54,7 +54,8 @@ class SimPullAnalysis:
 
     def call_ComDet_2(self, size, SD):
         path_fiji = os.path.join(self.path_program, 'Fiji.app')
-        imagej.init(path_fiji, headless=False)
+        IJ = imagej.init(path_fiji, headless=False)
+        IJ.ui().showUI()
 
         def extract_FoV(path):
             """
@@ -69,31 +70,32 @@ class SimPullAnalysis:
                         fov_path[file[:10]] = os.path.join(root, file)
             return fov_path
 
-        fov_paths = extract_FoV(datapath)
-        """
-        for field in sorted(fov_paths):
+        fov_paths = extract_FoV(self.path_data_main)
+
+        for field in tqdm(sorted(fov_paths)):
 
             imgFile = fov_paths[field]
-            saveto = os.path.join(resultpath, field)
-
-            IJ.open(imgFile)
-            IJ.run("Rename..." , "title="+field)
-            IJ.run("Z Project...", "projection=[Average Intensity]")
-
-            IJ.run("Detect Particles", "ch1i ch1a="+size+" ch1s="+SD+" rois=Ovals add=Nothing summary=Reset")
-            IJ.selectWindow('Results')
-            IJ.saveAs('table', saveto+'_results.csv')
-            IJ.selectWindow('Summary')
-            IJ.saveAs('text', saveto+'_summary.txt')
-            IJ.selectWindow('AVG_' + field)
-            IJ.saveAs('tif', saveto+'.tif')
-            wm.closeAllWindows()
-
-
-        IJ.run("Quit")
-        """
-
-
+            saveto = os.path.join(self.path_result_raw, field)
+            saveto = saveto.replace("\\", "/")
+            img = IJ.io().open(imgFile)
+            IJ.ui().show(field, img)
+            macro = """
+            run("Z Project...", "projection=[Average Intensity]");
+            run("Detect Particles", "ch1i ch1a="""+str(size)+""" ch1s="""+str(SD)+""" rois=Ovals add=Nothing summary=Reset");
+            selectWindow('Results');
+            saveAs("Results", \""""+saveto+"""_results.csv\");
+            close("Results");
+            selectWindow('Summary');
+            saveAs("Results", \""""+saveto+"""_summary.txt\");
+            close(\""""+field+"""_summary.txt\");
+            selectWindow(\"AVG_"""+field+"""\");
+            saveAs("tif", \""""+saveto+""".tif\");
+            close();
+            close();
+            """
+            IJ.py.run_macro(macro)
+        IJ.py.run_macro("""run("Quit")""")
+ 
     def generate_reports(self):
         fovs, wells = self.gather_project_info()
         # Generate sample reports
@@ -101,19 +103,19 @@ class SimPullAnalysis:
             well_result = pd.DataFrame()
             for fov in wells[well]:
                 try:
-                    df = pd.read_csv(self.path_result_raw + fov + '_results.csv')
+                    df = pd.read_csv(self.path_result_raw + '/' + fov + '_results.csv')
                     df = df.drop(columns=[' ', 'Channel', 'Slice', 'Frame'])
                     df['Abs_frame'] = fov[4:]
                     df['IntPerArea'] = df.IntegratedInt / df.NArea
                     well_result = pd.concat([well_result, df])
                 except pd.errors.EmptyDataError:
                     pass
-            well_result.to_csv(self.path_result_samples + well + '.csv', index=False)
+            well_result.to_csv(self.path_result_samples + '/' + well + '.csv', index=False)
 
         # Generate summary report
         summary_report = pd.DataFrame()
         for well in wells:
-            df = pd.read_csv(self.path_result_samples + well + '.csv')
+            df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
             df_sum = pd.DataFrame.from_dict({
                 'Well': [well],
                 'NoOfFoV': [len(wells[well])],
@@ -128,7 +130,7 @@ class SimPullAnalysis:
         # Generate quality control report
         QC_data = pd.DataFrame()
         for well in wells:
-            df = pd.read_csv(self.path_result_samples + well + '.csv')
+            df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
             df['Well'] = well
             df = df[['Well','Abs_frame', 'NArea', 'IntegratedInt', 'IntPerArea']]
             QC_data = pd.concat([QC_data, df])
@@ -138,7 +140,6 @@ class SimPullAnalysis:
 
 if __name__ == "__main__":
 
-    """
     path = input('Please input the path for analysis:\n')
     if os.path.isdir(path) != True:
     	print('Please input valid directory for data.')
@@ -151,8 +152,3 @@ if __name__ == "__main__":
     project.call_ComDet_2(size=size, SD=threshold)
     print('Generating reports...')
     project.generate_reports()
-    print('Done.')
-    """
-    project = SimPullAnalysis(r"D:\Work\workspace_20210310\zx07_20210214_SimPull_incubation_90mins")
-    project.call_ComDet_2(8,5)
-

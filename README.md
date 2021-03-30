@@ -13,8 +13,6 @@ Requirements
 - Python 3 (tested with Python 3.6-3.9)
 	- os
 	- sys
-	- shutil
-	- subprocess
 	- re
 	- pandas
 	- seaborn
