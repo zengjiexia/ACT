@@ -85,14 +85,14 @@
        <item row="0" column="3" colspan="3">
         <widget class="QPlainTextEdit" name="main_pathEntry">
          <property name="plainText">
-          <string>Path to folder</string>
+          <string>D:\Clouds\OneDrive - University of Cambridge\Projects\zx07_20210325_SimPull</string>
          </property>
         </widget>
        </item>
        <item row="1" column="5">
         <widget class="QPlainTextEdit" name="main_sizeEntry">
          <property name="plainText">
-          <string>Size</string>
+          <string>5</string>
          </property>
         </widget>
        </item>
@@ -133,7 +133,7 @@
        <item row="1" column="3">
         <widget class="QPlainTextEdit" name="main_thresholdEntry">
          <property name="plainText">
-          <string>Threshold</string>
+          <string>3</string>
          </property>
         </widget>
        </item>
@@ -299,7 +299,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="mainMenu">
