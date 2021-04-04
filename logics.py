@@ -1,6 +1,7 @@
 import os
 import re
 import pandas as pd
+from tqdm import tqdm
 import seaborn as sns
 import matplotlib.pyplot as plt
 import imagej
@@ -139,7 +140,7 @@ class SimPullAnalysis:
     def generate_reports(self):
         fovs, wells = self.gather_project_info()
         # Generate sample reports
-        for well in wells:
+        for well in tqdm(wells):
             well_result = pd.DataFrame()
             for fov in wells[well]:
                 try:
@@ -149,12 +150,12 @@ class SimPullAnalysis:
                     df['IntPerArea'] = df.IntegratedInt / df.NArea
                     well_result = pd.concat([well_result, df])
                 except pd.errors.EmptyDataError:
-                    pass
+                    continue
             well_result.to_csv(self.path_result_samples + '/' + well + '.csv', index=False)
 
         # Generate summary report
         summary_report = pd.DataFrame()
-        for well in wells:
+        for well in tqdm(wells):
             df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
             df_sum = pd.DataFrame.from_dict({
                 'Well': [well],
@@ -169,7 +170,7 @@ class SimPullAnalysis:
 
         # Generate quality control report
         QC_data = pd.DataFrame()
-        for well in wells:
+        for well in tqdm(wells):
             df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
             df['Well'] = well
             df = df[['Well','Abs_frame', 'NArea', 'IntegratedInt', 'IntPerArea']]
@@ -177,13 +178,6 @@ class SimPullAnalysis:
         QC_data = QC_data.reset_index(drop=True)
         QC_data.to_csv(self.path_result_main + '/QC.csv', index=False)
 
-
-class Worker(QObject):
-    finished = pyqtSignal()
-    progress = pyqtSignal(int)
-
-    def job(self):
-                
 
 if __name__ == "__main__":
 
@@ -200,3 +194,13 @@ if __name__ == "__main__":
     print('Generating reports...')
     project.generate_reports()
     print('Done.')
+
+
+'''
+class Worker(QObject):
+    finished = pyqtSignal()
+    progress = pyqtSignal(int)
+
+    def job(self):
+   
+'''             
