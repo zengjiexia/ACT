@@ -116,25 +116,31 @@ class SimPullAnalysis:
         # Generate summary report
         summary_report = pd.DataFrame()
         for well in wells:
-            df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
-            df_sum = pd.DataFrame.from_dict({
-                'Well': [well],
-                'NoOfFoV': [len(wells[well])],
-                'ParticlePerFoV': [len(df.index) / len(wells[well])],
-                'MeanSize': [df.NArea.mean()],
-                'MeanIntegrInt': [df.IntegratedInt.mean()],
-                'MeanIntPerArea': [df.IntPerArea.mean()]
-            })
-            summary_report = pd.concat([summary_report, df_sum])
+            try:
+                df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
+                df_sum = pd.DataFrame.from_dict({
+                    'Well': [well],
+                    'NoOfFoV': [len(wells[well])],
+                    'ParticlePerFoV': [len(df.index) / len(wells[well])],
+                    'MeanSize': [df.NArea.mean()],
+                    'MeanIntegrInt': [df.IntegratedInt.mean()],
+                    'MeanIntPerArea': [df.IntPerArea.mean()]
+                   })
+                summary_report = pd.concat([summary_report, df_sum])
+            except pd.errors.EmptyDataError:
+                pass                
         summary_report.to_csv(self.path_result_main + '/Summary.csv', index=False)
 
         # Generate quality control report
         QC_data = pd.DataFrame()
         for well in wells:
-            df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
-            df['Well'] = well
-            df = df[['Well','Abs_frame', 'NArea', 'IntegratedInt', 'IntPerArea']]
-            QC_data = pd.concat([QC_data, df])
+            try:
+                df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
+                df['Well'] = well
+                df = df[['Well','Abs_frame', 'NArea', 'IntegratedInt', 'IntPerArea']]
+                QC_data = pd.concat([QC_data, df])
+            except pd.errors.EmptyDataError:
+                pass
         QC_data = QC_data.reset_index(drop=True)
         QC_data.to_csv(self.path_result_main + '/QC.csv', index=False)
 
@@ -143,8 +149,8 @@ if __name__ == "__main__":
 
     path = input('Please input the path for analysis:\n')
     if os.path.isdir(path) != True:
-    	print('Please input valid directory for data.')
-    	quit()
+        print('Please input valid directory for data.')
+        quit()
     project = SimPullAnalysis(path)
     print('Launching: ' + path)
     size = input('Please input the estimated size of particles(in pixels):\n')
