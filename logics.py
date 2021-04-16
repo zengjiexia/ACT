@@ -41,57 +41,6 @@ class SimPullAnalysis:
         return fovs, wells
 
 
-    def call_ComDet_UI(self, size, sd, progressbar):
-        path_fiji = os.path.join(self.path_program, 'Fiji.app')
-        IJ = imagej.init(path_fiji, headless=False)
-        IJ.ui().showUI()
-
-        def extract_FoV(path):
-            """
-            #get the name of field of views for a sample (format - XnYnRnWnCn)
-            #para: path - string
-            #return: fov_path - dict[fov] = path
-            """
-            fov_path = {}
-            for root, dirs, files in os.walk(path):
-                for file in files:
-                    if file.endswith('.tif'):
-                        fov_path[file[:10]] = os.path.join(root, file)
-            return fov_path
-
-        fov_paths = extract_FoV(self.path_data_main)
-
-        for c, field in enumerate(sorted(fov_paths), start=1):
-
-            if progressbar.wasCanceled():
-                break
-            else:
-                progressbar.setValue(round(c/len(fov_paths),2))
-
-            imgFile = fov_paths[field]
-            saveto = os.path.join(self.path_result_raw, field)
-            saveto = saveto.replace("\\", "/")
-            img = IJ.io().open(imgFile)
-            IJ.ui().show(field, img)
-            macro = """
-            run("Z Project...", "projection=[Average Intensity]");
-            run("Detect Particles", "ch1i ch1a="""+str(size)+""" ch1s="""+str(sd)+""" rois=Ovals add=Nothing summary=Reset");
-            selectWindow('Results');
-            saveAs("Results", \""""+saveto+"""_results.csv\");
-            close("Results");
-            selectWindow('Summary');
-            saveAs("Results", \""""+saveto+"""_summary.txt\");
-            close(\""""+field+"""_summary.txt\");
-            selectWindow(\"AVG_"""+field+"""\");
-            saveAs("tif", \""""+saveto+""".tif\");
-            close();
-            close();
-            """
-            IJ.py.run_macro(macro)
-        IJ.py.run_macro("""run("Quit")""")
-        return c
-
-
     def call_ComDet_cmd(self, size, sd):
         path_fiji = os.path.join(self.path_program, 'Fiji.app')
         IJ = imagej.init(path_fiji, headless=False)
@@ -150,33 +99,40 @@ class SimPullAnalysis:
                     df['IntPerArea'] = df.IntegratedInt / df.NArea
                     well_result = pd.concat([well_result, df])
                 except pd.errors.EmptyDataError:
-                    continue
+                    pass
             well_result.to_csv(self.path_result_samples + '/' + well + '.csv', index=False)
 
         # Generate summary report
         summary_report = pd.DataFrame()
         for well in tqdm(wells):
-            df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
-            df_sum = pd.DataFrame.from_dict({
-                'Well': [well],
-                'NoOfFoV': [len(wells[well])],
-                'ParticlePerFoV': [len(df.index) / len(wells[well])],
-                'MeanSize': [df.NArea.mean()],
-                'MeanIntegrInt': [df.IntegratedInt.mean()],
-                'MeanIntPerArea': [df.IntPerArea.mean()]
-            })
-            summary_report = pd.concat([summary_report, df_sum])
+            try:
+                df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
+                df_sum = pd.DataFrame.from_dict({
+                    'Well': [well],
+                    'NoOfFoV': [len(wells[well])],
+                    'ParticlePerFoV': [len(df.index) / len(wells[well])],
+                    'MeanSize': [df.NArea.mean()],
+                    'MeanIntegrInt': [df.IntegratedInt.mean()],
+                    'MeanIntPerArea': [df.IntPerArea.mean()]
+                })
+                summary_report = pd.concat([summary_report, df_sum])
+            except pd.errors.EmptyDataError:
+                pass
         summary_report.to_csv(self.path_result_main + '/Summary.csv', index=False)
 
         # Generate quality control report
         QC_data = pd.DataFrame()
         for well in tqdm(wells):
-            df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
-            df['Well'] = well
-            df = df[['Well','Abs_frame', 'NArea', 'IntegratedInt', 'IntPerArea']]
-            QC_data = pd.concat([QC_data, df])
+            try:
+                df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
+                df['Well'] = well
+                df = df[['Well','Abs_frame', 'NArea', 'IntegratedInt', 'IntPerArea']]
+                QC_data = pd.concat([QC_data, df])
+            except pd.errors.EmptyDataError:
+                pass
         QC_data = QC_data.reset_index(drop=True)
         QC_data.to_csv(self.path_result_main + '/QC.csv', index=False)
+
 
 
 if __name__ == "__main__":
@@ -196,11 +152,4 @@ if __name__ == "__main__":
     print('Done.')
 
 
-'''
-class Worker(QObject):
-    finished = pyqtSignal()
-    progress = pyqtSignal(int)
 
-    def job(self):
-   
-'''             

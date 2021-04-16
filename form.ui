@@ -85,7 +85,7 @@
        <item row="0" column="3" colspan="3">
         <widget class="QPlainTextEdit" name="main_pathEntry">
          <property name="plainText">
-          <string>D:\Clouds\OneDrive - University of Cambridge\Projects\zx07_20210325_SimPull</string>
+          <string>D:\Work\zx07_20210325_SimPull</string>
          </property>
         </widget>
        </item>
