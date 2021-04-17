@@ -1,5 +1,5 @@
 from PySide6 import QtCore, QtGui, QtWidgets
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QObject, Signal, Slot, QAbstractTableModel, Qt
 import pandas as pd
 import sys
 import imagej
@@ -30,6 +30,31 @@ class LogTextEdit(QtWidgets.QPlainTextEdit):
         self.setTextCursor(cursor)
         self.insertPlainText(text)
 
+
+class PandasModel(QAbstractTableModel):
+    """
+    Class to populate a table view with a pandas dataframe
+    """
+    def __init__(self, data, parent=None):
+        QAbstractTableModel.__init__(self, parent)
+        self._data = data
+
+    def rowCount(self, parent=None):
+        return len(self._data.values)
+
+    def columnCount(self, parent=None):
+        return self._data.columns.size
+
+    def data(self, index, role=Qt.DisplayRole):
+        if index.isValid():
+            if role == Qt.DisplayRole:
+                return str(self._data.iloc[index.row()][index.column()])
+        return None
+
+    def headerData(self, col, orientation, role):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            return self._data.columns[col]
+        return None
 
 
 class FijiWorker(QObject):

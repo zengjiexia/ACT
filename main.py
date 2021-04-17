@@ -9,6 +9,7 @@ import pyqtgraph as pg
 import toolbox
 from logics import SimPullAnalysis
 import imagej
+import pandas as pd
 
 
 class DiffractionLimitAnalysis_UI(QMainWindow):
@@ -83,8 +84,8 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
     def clickMainWindowRun(self):
         guard = self._checkParameters()
         if guard == 1:
-            #guard == self._runAnalysis()
-            guard == self._generateReports()
+            guard == self._runAnalysis()
+            #guard == self._generateReports() # testing solo report generation
         else:
             self.showMessage('w', 'Failed to locate particles using ComDet. Please see help.')
 
@@ -173,10 +174,12 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
         self.fijiThread.finished.connect(
             lambda: self.restProgress()
             ) # Reset progress bar to rest
-        self.fijiThread.finished.connect(
-            lambda: self._generateReports()
-            )
-
+        try:
+            self.fijiThread.finished.connect(
+                lambda: self._generateReports()
+                ) # Generate reports
+        except:
+            print(sys.exc_info())
 
     def _generateReports(self):
         # Generate sample summaries, Summary.csv and QC.csv
@@ -207,6 +210,17 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
         self.reportThread.finished.connect(
             lambda: self.restProgress()
             ) # Reset progress bar to rest
+        try:
+            self.reportThread.finished.connect(
+                lambda: self._showResult_main()
+                )
+        except:
+            print(sys.exc_info())
+
+    def _showResult_main(self):
+        df = pd.read_csv(self.project.path_result_main + '/Summary.csv')
+        model = toolbox.PandasModel(df)
+        self.window.main_resultTable.setModel(model)
 
 
 if __name__ == "__main__":
