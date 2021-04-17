@@ -14,7 +14,7 @@ import imagej
 class DiffractionLimitAnalysis_UI(QMainWindow):
 
     def __init__(self):
-        super(SimPullAnalysis_UI, self).__init__()
+        super(DiffractionLimitAnalysis_UI, self).__init__()
         self.loadUI()
 
     def loadUI(self):
@@ -53,6 +53,21 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
         # auto scroll down to the newest message
 
 
+    def initialiseProgress(self, work, workload):
+        self.window.progressBar.setMaximum(workload)
+        self.window.progressBar.setValue(0)
+        self.window.progressBarLabel.setText(work)
+
+
+    def updateProgress(self, progress):
+        self.window.progressBar.setValue(progress)
+
+
+    def restProgress(self):
+        self.window.progressBarLabel.setText('No work in process.')
+        self.window.progressBar.reset()
+
+
     def showMessage(self, msg_type, message):
         msgBox = QMessageBox(self.window)
         if msg_type == 'c':
@@ -66,26 +81,29 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
 
 
     def clickMainWindowRun(self):
-        good_parameters = self._checkParameters()
-        if good_parameters == 1:
-            self._runAnalysis()
+        guard = self._checkParameters()
+        if guard == 1:
+            #guard == self._runAnalysis()
+            guard == self._generateReports()
+        else:
+            self.showMessage('w', 'Failed to locate particles using ComDet. Please see help.')
 
 
     def _checkParameters(self):
         #Check if data path exists
-        data_path = self.window.main_pathEntry.toPlainText()
+        data_path = self.window.main_pathEntry.text()
         if os.path.isdir(data_path) == False:
             self.showMessage('w', 'Error: Path to folder not found.')
             return 0
         else:
             self.data_path = data_path
-            self.window.main_pathEntry.setPlainText(self.data_path)
+            self.window.main_pathEntry.setText(self.data_path)
             self.updateLog('Data path set to '+data_path)
 
         #Check input: threshold
         try:
-            self.threshold = int(self.window.main_thresholdEntry.toPlainText())
-            self.window.main_thresholdEntry.setPlainText(str(self.threshold))
+            self.threshold = int(self.window.main_thresholdEntry.text())
+            self.window.main_thresholdEntry.setText(str(self.threshold))
         except ValueError:
             self.showMessage('c', 'Please input a number for threshold.')
             return 0
@@ -96,8 +114,8 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
 
         #Check input: estimated size
         try:
-            self.size = int(self.window.main_sizeEntry.toPlainText())
-            self.window.main_sizeEntry.setPlainText(str(self.size))
+            self.size = int(self.window.main_sizeEntry.text())
+            self.window.main_sizeEntry.setText(str(self.size))
         except ValueError:
             self.showMessage('c', 'Please input a number for estimated particle size.')
             return 0
@@ -106,12 +124,12 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
         else:
             self.updateLog('Estimated particle size set as '+str(self.size)+' pixels.')
 
+        self.project = SimPullAnalysis(self.data_path) # Creat SimPullAnalysis object
         return 1
 
 
     def _runAnalysis(self):
 
-        self.project = SimPullAnalysis(self.data_path)
         path_fiji = os.path.join(os.path.dirname(__file__), 'Fiji.app')
 
         try:
@@ -119,8 +137,8 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
             self.IJ = imagej.init(path_fiji, headless=False) # Initiate fiji
             #self.IJ.ui().showUI()
         except TypeError:
-            print('Fiji existed.')
-            pass
+            self.showMessage('c', 'Fiji initiation failed. Please restart program.')
+            return 0
 
         # Create a QThread object
         self.fijiThread = QThread()
@@ -135,9 +153,11 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
         # Move worker to the thread
         self.fijiWorker.moveToThread(self.fijiThread)
         # Connect progress signal to GUI
-        self.fijiWorker.progress.connect(self.updateLog)
+        self.fijiWorker.work_info.connect(self.initialiseProgress)
+        self.fijiWorker.progress.connect(self.updateProgress)
         # Start the thread
         self.fijiThread.start()
+        self.updateLog('Start to locate particles...')
         
         # UI response
         self.window.main_runButton.setEnabled(False) # Block 'Run' button
@@ -150,8 +170,43 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
         self.fijiThread.finished.connect(
             lambda: self.IJ.getContext().dispose()
             ) # Close fiji
+        self.fijiThread.finished.connect(
+            lambda: self.restProgress()
+            ) # Reset progress bar to rest
+        self.fijiThread.finished.connect(
+            lambda: self._generateReports()
+            )
 
 
+    def _generateReports(self):
+        # Generate sample summaries, Summary.csv and QC.csv
+        self.reportThread = QThread()
+        self.reportwriter = toolbox.ReportWriter(self.project)
+
+        self.reportThread.started.connect(self.reportwriter.run)
+        self.reportwriter.finished.connect(self.reportThread.quit)
+        self.reportwriter.finished.connect(self.reportwriter.deleteLater)
+        self.reportThread.finished.connect(self.reportThread.deleteLater)
+
+
+        self.reportwriter.moveToThread(self.reportThread)
+
+        self.reportwriter.work_info.connect(self.initialiseProgress)
+        self.reportwriter.progress.connect(self.updateProgress)
+
+        self.reportThread.start()
+        self.updateLog('Start to generate reports...')
+
+        self.window.main_runButton.setEnabled(False) # Block 'Run' button
+        self.reportThread.finished.connect(
+            lambda: self.window.main_runButton.setEnabled(True) # Reset 'Run' button
+            )
+        self.reportThread.finished.connect(
+            lambda: self.updateLog('Reports generated at: ' + self.project.path_result_main)
+            )
+        self.reportThread.finished.connect(
+            lambda: self.restProgress()
+            ) # Reset progress bar to rest
 
 
 if __name__ == "__main__":
