@@ -8,7 +8,6 @@ from PySide6.QtUiTools import QUiLoader
 import pyqtgraph as pg
 import toolbox
 from logics import SimPullAnalysis
-import imagej
 import pandas as pd
 
 
@@ -89,7 +88,6 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
         else:
             self.showMessage('w', 'Failed to locate particles using ComDet. Please see help.')
 
-
     def _checkParameters(self):
         #Check if data path exists
         data_path = self.window.main_pathEntry.text()
@@ -126,36 +124,29 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
             self.updateLog('Estimated particle size set as '+str(self.size)+' pixels.')
 
         self.project = SimPullAnalysis(self.data_path) # Creat SimPullAnalysis object
-        return 1
+        if self.project.error == 1:
+            return 1
+        else:
+            self.showMessage('c', self.project.error)
 
 
     def _runAnalysis(self):
-
-        path_fiji = os.path.join(os.path.dirname(__file__), 'Fiji.app')
-
-        try:
-            self.updateLog('Initiating Fiji...')
-            self.IJ = imagej.init(path_fiji, headless=False) # Initiate fiji
-            #self.IJ.ui().showUI()
-        except TypeError:
-            self.showMessage('c', 'Fiji initiation failed. Please restart program.')
-            return 0
-
+        
+        self.initialiseProgress('Locating particles...', len(self.project.fov_paths))
         # Create a QThread object
         self.fijiThread = QThread()
         # Create a worker object
-        self.fijiWorker = toolbox.FijiWorker(self.IJ, self.project, self.size, self.threshold)
+        self.particleFinder = toolbox.ParticleFinder('ComDet', self.project, self.size, self.threshold)
 
         # Connect signals and slots
-        self.fijiThread.started.connect(self.fijiWorker.run)
-        self.fijiWorker.finished.connect(self.fijiThread.quit)
-        self.fijiWorker.finished.connect(self.fijiWorker.deleteLater)
+        self.fijiThread.started.connect(self.particleFinder.run)
+        self.particleFinder.finished.connect(self.fijiThread.quit)
+        self.particleFinder.finished.connect(self.particleFinder.deleteLater)
         self.fijiThread.finished.connect(self.fijiThread.deleteLater)
         # Move worker to the thread
-        self.fijiWorker.moveToThread(self.fijiThread)
+        self.particleFinder.moveToThread(self.fijiThread)
         # Connect progress signal to GUI
-        self.fijiWorker.work_info.connect(self.initialiseProgress)
-        self.fijiWorker.progress.connect(self.updateProgress)
+        self.particleFinder.progress.connect(self.updateProgress)
         # Start the thread
         self.fijiThread.start()
         self.updateLog('Start to locate particles...')
@@ -169,17 +160,16 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
             lambda: self.updateLog('Particles in images are located.')
             )
         self.fijiThread.finished.connect(
-            lambda: self.IJ.getContext().dispose()
-            ) # Close fiji
-        self.fijiThread.finished.connect(
             lambda: self.restProgress()
             ) # Reset progress bar to rest
+    '''
         try:
             self.fijiThread.finished.connect(
                 lambda: self._generateReports()
                 ) # Generate reports
         except:
             print(sys.exc_info())
+
 
     def _generateReports(self):
         # Generate sample summaries, Summary.csv and QC.csv
@@ -221,7 +211,7 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
         df = pd.read_csv(self.project.path_result_main + '/Summary.csv')
         model = toolbox.PandasModel(df)
         self.window.main_resultTable.setModel(model)
-
+    '''
 
 if __name__ == "__main__":
 

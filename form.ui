@@ -133,7 +133,7 @@
        <item row="0" column="1" colspan="3">
         <widget class="QLineEdit" name="main_pathEntry">
          <property name="text">
-          <string>D:\Work\zx07_20210325_SimPull</string>
+          <string>D:\Work\DLA_test\samples</string>
          </property>
         </widget>
        </item>

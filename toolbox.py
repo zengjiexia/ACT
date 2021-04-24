@@ -57,65 +57,27 @@ class PandasModel(QAbstractTableModel):
         return None
 
 
-class FijiWorker(QObject):
+class ParticleFinder(QObject):
     finished = Signal()
-    work_info = Signal(str, int)
     progress = Signal(int)
 
-    def __init__(self, IJ, project, size, threshold):
+    def __init__(self, algorithm, project, size, threshold):
         super().__init__()
 
-        self.IJ = IJ
+        self.algorithm = algorithm
         self.project = project
         self.size = size
         self.threshold = threshold
 
     @QtCore.Slot()
     def run(self):
-
-        def extract_FoV(path):
-            """
-            #get the name of field of views for a sample (format - XnYnRnWnCn)
-            #para: path - string
-            #return: fov_path - dict[fov] = path
-            """
-            fov_path = {}
-            for root, dirs, files in os.walk(path):
-                for file in files:
-                    if file.endswith('.tif'):
-                        fov_path[file[:10]] = os.path.join(root, file)
-            return fov_path
-
-        fov_paths = extract_FoV(self.project.path_data_main)
-
-        self.work_info.emit('Locating particles...', len(fov_paths))
-
-        for c, field in enumerate(sorted(fov_paths)):
-            imgFile = fov_paths[field]
-            saveto = os.path.join(self.project.path_result_raw, field)
-            saveto = saveto.replace("\\", "/")
-            img = self.IJ.io().open(imgFile)
-            self.IJ.ui().show(field, img)
-            macro = """
-            run("Z Project...", "projection=[Average Intensity]");
-            run("Detect Particles", "ch1i ch1a="""+str(self.size)+""" ch1s="""+str(self.threshold)+""" rois=Ovals add=Nothing summary=Reset");
-            selectWindow('Results');
-            saveAs("Results", \""""+saveto+"""_results.csv\");
-            close("Results");
-            selectWindow('Summary');
-            saveAs("Results", \""""+saveto+"""_summary.txt\");
-            close(\""""+field+"""_summary.txt\");
-            selectWindow(\"AVG_"""+field+"""\");
-            saveAs("tif", \""""+saveto+""".tif\");
-            close();
-            close();
-            """
+        if self.algorithm == 'ComDet':
             try:
-                self.IJ.py.run_macro(macro)
+                self.project.call_ComDet(self.size, self.threshold, progress_signal=self.progress)
             except:
                 print(sys.exc_info())
-            self.progress.emit(c+1)
-
+        else:
+            pass
         self.finished.emit()
 
 
