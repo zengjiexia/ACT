@@ -78,12 +78,12 @@ class ParticleFinder(QObject):
                 print(sys.exc_info())
         else:
             pass
+
         self.finished.emit()
 
 
 class ReportWriter(QObject):
     finished = Signal()
-    work_info = Signal(str, int)
     progress = Signal(int)
 
     def __init__(self, project):
@@ -93,59 +93,9 @@ class ReportWriter(QObject):
 
     @QtCore.Slot()
     def run(self):
-
-        fovs, wells = self.project.gather_project_info()
-        self.work_info.emit('Generating reports...', 3*len(wells))
-        c = 1
-        # Generate sample reports
-        for well in wells:
-            well_result = pd.DataFrame()
-            for fov in wells[well]:
-                try:
-                    df = pd.read_csv(self.project.path_result_raw + '/' + fov + '_results.csv')
-                    df = df.drop(columns=[' ', 'Channel', 'Slice', 'Frame'])
-                    df['Abs_frame'] = fov[4:]
-                    df['IntPerArea'] = df.IntegratedInt / df.NArea
-                    well_result = pd.concat([well_result, df])
-                except pd.errors.EmptyDataError:
-                    pass
-                self.progress.emit(c)
-                c += 1
-            well_result.to_csv(self.project.path_result_samples + '/' + well + '.csv', index=False)
-
-        # Generate summary report
-        summary_report = pd.DataFrame()
-        for well in wells:
-            try:
-                df = pd.read_csv(self.project.path_result_samples + '/' + well + '.csv')
-                df_sum = pd.DataFrame.from_dict({
-                    'Well': [well],
-                    'NoOfFoV': [len(wells[well])],
-                    'ParticlePerFoV': [len(df.index) / len(wells[well])],
-                    'MeanSize': [df.NArea.mean()],
-                    'MeanIntegrInt': [df.IntegratedInt.mean()],
-                    'MeanIntPerArea': [df.IntPerArea.mean()]
-                })
-                summary_report = pd.concat([summary_report, df_sum])
-            except pd.errors.EmptyDataError:
-                pass
-            self.progress.emit(c)
-            c += 1
-        summary_report.to_csv(self.project.path_result_main + '/Summary.csv', index=False)
-
-        # Generate quality control report
-        QC_data = pd.DataFrame()
-        for well in wells:
-            try:
-                df = pd.read_csv(self.project.path_result_samples + '/' + well + '.csv')
-                df['Well'] = well
-                df = df[['Well','Abs_frame', 'NArea', 'IntegratedInt', 'IntPerArea']]
-                QC_data = pd.concat([QC_data, df])
-            except pd.errors.EmptyDataError:
-                pass
-            self.progress.emit(c)
-            c += 1
-        QC_data = QC_data.reset_index(drop=True)
-        QC_data.to_csv(self.project.path_result_main + '/QC.csv', index=False)
+        try:
+            self.project.generate_reports(progress_signal=self.progress)
+        except:
+            print(sys.exc_info())
 
         self.finished.emit()

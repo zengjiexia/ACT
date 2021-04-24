@@ -107,30 +107,40 @@ class SimPullAnalysis:
         return 1
 
 
-    def generate_reports(self):
+    def generate_reports(self, progress_signal=None):
+        if progress_signal == None: #i.e. running in non-GUI mode
+            workload = tqdm(sorted(self.wells)) # using tqdm as progress bar in cmd
+        else:
+            workload = sorted(self.wells)
+            c = 1 # progress indicator
         # Generate sample reports
-        for well in tqdm(self.wells):
+        for well in workload:
             well_result = pd.DataFrame()
             for fov in self.wells[well]:
                 try:
                     df = pd.read_csv(self.path_result_raw + '/' + fov + '_results.csv')
                     df = df.drop(columns=[' ', 'Channel', 'Slice', 'Frame'])
-                    df['Abs_frame'] = fov[4:]
+                    df['FoV'] = fov
                     df['IntPerArea'] = df.IntegratedInt / df.NArea
                     well_result = pd.concat([well_result, df])
                 except pd.errors.EmptyDataError:
                     pass
             well_result.to_csv(self.path_result_samples + '/' + well + '.csv', index=False)
+            if progress_signal == None:
+                pass
+            else:
+                progress_signal.emit(c)
+                c += 1
 
         # Generate summary report
         summary_report = pd.DataFrame()
-        for well in tqdm(self.wells):
+        for well in workload:
             try:
                 df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
                 df_sum = pd.DataFrame.from_dict({
                     'Well': [well],
-                    'NoOfFoV': [len(wells[well])],
-                    'ParticlePerFoV': [len(df.index) / len(wells[well])],
+                    'NoOfFoV': [len(self.wells[well])],
+                    'ParticlePerFoV': [len(df.index) / len(self.wells[well])],
                     'MeanSize': [df.NArea.mean()],
                     'MeanIntegrInt': [df.IntegratedInt.mean()],
                     'MeanIntPerArea': [df.IntPerArea.mean()]
@@ -138,11 +148,16 @@ class SimPullAnalysis:
                 summary_report = pd.concat([summary_report, df_sum])
             except pd.errors.EmptyDataError:
                 pass
+            if progress_signal == None:
+                pass
+            else:
+                progress_signal.emit(c)
+                c += 1
         summary_report.to_csv(self.path_result_main + '/Summary.csv', index=False)
 
         # Generate quality control report
         QC_data = pd.DataFrame()
-        for well in tqdm(self.wells):
+        for well in workload:
             try:
                 df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
                 df['Well'] = well
@@ -150,9 +165,14 @@ class SimPullAnalysis:
                 QC_data = pd.concat([QC_data, df])
             except pd.errors.EmptyDataError:
                 pass
+            if progress_signal == None:
+                pass
+            else:
+                progress_signal.emit(c)
+                c += 1
         QC_data = QC_data.reset_index(drop=True)
         QC_data.to_csv(self.path_result_main + '/QC.csv', index=False)
-
+        return 1
 
 
 if __name__ == "__main__":

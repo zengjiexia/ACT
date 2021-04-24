@@ -131,40 +131,40 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
 
 
     def _runAnalysis(self):
-        
         self.initialiseProgress('Locating particles...', len(self.project.fov_paths))
+
         # Create a QThread object
-        self.fijiThread = QThread()
+        self.PFThread = QThread()
         # Create a worker object
         self.particleFinder = toolbox.ParticleFinder('ComDet', self.project, self.size, self.threshold)
 
         # Connect signals and slots
-        self.fijiThread.started.connect(self.particleFinder.run)
-        self.particleFinder.finished.connect(self.fijiThread.quit)
+        self.PFThread.started.connect(self.particleFinder.run)
+        self.particleFinder.finished.connect(self.PFThread.quit)
         self.particleFinder.finished.connect(self.particleFinder.deleteLater)
-        self.fijiThread.finished.connect(self.fijiThread.deleteLater)
+        self.PFThread.finished.connect(self.PFThread.deleteLater)
         # Move worker to the thread
-        self.particleFinder.moveToThread(self.fijiThread)
+        self.particleFinder.moveToThread(self.PFThread)
         # Connect progress signal to GUI
         self.particleFinder.progress.connect(self.updateProgress)
         # Start the thread
-        self.fijiThread.start()
+        self.PFThread.start()
         self.updateLog('Start to locate particles...')
         
         # UI response
         self.window.main_runButton.setEnabled(False) # Block 'Run' button
-        self.fijiThread.finished.connect(
+        self.PFThread.finished.connect(
             lambda: self.window.main_runButton.setEnabled(True) # Reset 'Run' button
             )
-        self.fijiThread.finished.connect(
+        self.PFThread.finished.connect(
             lambda: self.updateLog('Particles in images are located.')
             )
-        self.fijiThread.finished.connect(
+        self.PFThread.finished.connect(
             lambda: self.restProgress()
             ) # Reset progress bar to rest
-    '''
+
         try:
-            self.fijiThread.finished.connect(
+            self.PFThread.finished.connect(
                 lambda: self._generateReports()
                 ) # Generate reports
         except:
@@ -172,20 +172,21 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
 
 
     def _generateReports(self):
+        self.initialiseProgress('Generating reports...', 3*len(self.project.wells))
+
         # Generate sample summaries, Summary.csv and QC.csv
         self.reportThread = QThread()
-        self.reportwriter = toolbox.ReportWriter(self.project)
+        self.reportWriter = toolbox.ReportWriter(self.project)
 
-        self.reportThread.started.connect(self.reportwriter.run)
-        self.reportwriter.finished.connect(self.reportThread.quit)
-        self.reportwriter.finished.connect(self.reportwriter.deleteLater)
+        self.reportThread.started.connect(self.reportWriter.run)
+        self.reportWriter.finished.connect(self.reportThread.quit)
+        self.reportWriter.finished.connect(self.reportWriter.deleteLater)
         self.reportThread.finished.connect(self.reportThread.deleteLater)
 
 
-        self.reportwriter.moveToThread(self.reportThread)
+        self.reportWriter.moveToThread(self.reportThread)
 
-        self.reportwriter.work_info.connect(self.initialiseProgress)
-        self.reportwriter.progress.connect(self.updateProgress)
+        self.reportWriter.progress.connect(self.updateProgress)
 
         self.reportThread.start()
         self.updateLog('Start to generate reports...')
@@ -200,6 +201,7 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
         self.reportThread.finished.connect(
             lambda: self.restProgress()
             ) # Reset progress bar to rest
+
         try:
             self.reportThread.finished.connect(
                 lambda: self._showResult_main()
@@ -211,7 +213,7 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
         df = pd.read_csv(self.project.path_result_main + '/Summary.csv')
         model = toolbox.PandasModel(df)
         self.window.main_resultTable.setModel(model)
-    '''
+
 
 if __name__ == "__main__":
 
