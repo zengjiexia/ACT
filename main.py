@@ -3,7 +3,7 @@ import os
 
 import PySide6
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QMessageBox, QProgressDialog
-from PySide6.QtCore import QFile, QIODevice, Slot, Qt, QThread, Signal
+from PySide6.QtCore import QFile, QIODevice, Slot, Qt, QThread, Signal, QRect
 from PySide6.QtUiTools import QUiLoader
 import pyqtgraph as pg
 import toolbox
@@ -11,15 +11,15 @@ from logics import SimPullAnalysis
 import pandas as pd
 
 
-class DiffractionLimitAnalysis_UI(QMainWindow):
+class DiffractionLimitedAnalysis_UI(QMainWindow):
 
     def __init__(self):
-        super(DiffractionLimitAnalysis_UI, self).__init__()
+        super(DiffractionLimitedAnalysis_UI, self).__init__()
         self.loadUI()
 
     def loadUI(self):
 
-        path = os.path.join(os.path.dirname(__file__), "form.ui")
+        path = os.path.join(os.path.dirname(__file__), "UI_form/DiffractionLimitedAnalysis.ui")
         ui_file = QFile(path)
         if not ui_file.open(QIODevice.ReadOnly):
             print(f"Cannot open {ui_file_name}: {ui_file.errorString()}")
@@ -83,8 +83,9 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
     def clickMainWindowRun(self):
         guard = self._checkParameters()
         if guard == 1:
-            guard == self._runAnalysis()
-            #guard == self._generateReports() # testing solo report generation
+            guard = self._runAnalysis()
+            #guard = self._generateReports() # testing solely report generation
+            #guard = self._showResult_main() # testing solely result presentation
         else:
             self.showMessage('w', 'Failed to locate particles using ComDet. Please see help.')
 
@@ -215,10 +216,17 @@ class DiffractionLimitAnalysis_UI(QMainWindow):
         self.window.main_resultTable.setModel(model)
 
 
+
+class TagDataPopup(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setGeometry(QRect(100,100,100,100))
+        
+
 if __name__ == "__main__":
 
     app = QApplication([])
-    #app.setQuitOnLastWindowClosed(False)
-    widget = DiffractionLimitAnalysis_UI()
+    #widget = DiffractionLimitedAnalysis_UI()
+    widget = TagDataPopup()
     widget.show()
     sys.exit(app.exec_())
