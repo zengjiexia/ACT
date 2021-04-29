@@ -172,6 +172,7 @@ class SimPullAnalysis:
                 c += 1
         QC_data = QC_data.reset_index(drop=True)
         QC_data.to_csv(self.path_result_main + '/QC.csv', index=False)
+        
         return 1
 
 

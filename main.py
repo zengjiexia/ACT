@@ -2,7 +2,7 @@ import sys
 import os
 
 import PySide6
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QMessageBox, QProgressDialog
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QMessageBox, QProgressDialog, QFileDialog
 from PySide6.QtCore import QFile, QIODevice, Slot, Qt, QThread, Signal, QRect
 from PySide6.QtUiTools import QUiLoader
 import pyqtgraph as pg
@@ -38,6 +38,7 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
 
         # main window widgets
         self.window.main_runButton.clicked.connect(self.clickMainWindowRun)
+        self.window.main_tagButton.clicked.connect(self.clickMainWindowTag)
 
         ui_file.close()
         if not self.window:
@@ -210,23 +211,80 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         except:
             print(sys.exc_info())
 
+
     def _showResult_main(self):
         df = pd.read_csv(self.project.path_result_main + '/Summary.csv')
         model = toolbox.PandasModel(df)
         self.window.main_resultTable.setModel(model)
 
 
+    def clickMainWindowTag(self):
+        self.tagdatapopup = TagDataPopup(parent=self)
+        self.tagdatapopup.window.show()
+        self.tagdatapopup.closed.connect(
+            lambda: self._showResult_main()
+            )
+        self.tagdatapopup.closed.connect(self.tagdatapopup.window.close)
+
+
 
 class TagDataPopup(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.setGeometry(QRect(100,100,100,100))
+    closed = Signal()
+    def __init__(self, parent=None):
+        self.parent = parent
+        self.mainWindow = self.parent.window
+        super(TagDataPopup, self).__init__(parent=self.mainWindow)
+        self.loadUI()
         
+    def loadUI(self):
+
+        path = os.path.join(os.path.dirname(__file__), "UI_form/TagDataPopup.ui")
+        ui_file = QFile(path)
+        if not ui_file.open(QIODevice.ReadOnly):
+            print(f"Cannot open {ui_file_name}: {ui_file.errorString()}")
+            sys.exit(-1)
+
+        loader = QUiLoader()
+        self.window = loader.load(ui_file, self.mainWindow)
+
+        self.window.loadButton.clicked.connect(self.clickLoadButton)
+        self.window.buttonBox.button(self.window.buttonBox.Apply).clicked.connect(self._applyTags)
+
+        ui_file.close()
+        if not self.window:
+            print(loader.errorString())
+            sys.exit(-1)
+        
+        df = pd.read_csv(os.path.join(os.path.dirname(__file__), "UI_form/data_tagging_sample.csv"))
+        model = toolbox.PandasModel(df)
+        self.window.exampleTableView.setModel(model)
+
+
+    def clickLoadButton(self):
+        self.path_tags = QFileDialog.getOpenFileName(parent=self.window, caption='Select tags source', dir=os.path.dirname(__file__), filter="Text files (*.csv)")
+        self.path_tags = list(self.path_tags)[0]
+        self.window.pathLabel.setText(self.path_tags)
+        df = pd.read_csv(self.path_tags)
+        model = toolbox.PandasModel(df)
+        self.window.tagsTableView.setModel(model)
+
+
+    def _applyTags(self):
+        fileToUpdate = ['Summary.csv', 'QC.csv']
+        tag_df = pd.read_csv(self.path_tags)
+        for file in fileToUpdate:
+            data_df = pd.read_csv(os.path.join(self.parent.project.path_result_main, file))
+            cols_to_use = ['Well'] + list(tag_df.columns.difference(data_df.columns))
+            updated_df = pd.merge(data_df, tag_df[cols_to_use], on='Well')
+            updated_df.to_csv(os.path.join(self.parent.project.path_result_main, file), index=False)
+        self.closed.emit()
+
+
 
 if __name__ == "__main__":
 
     app = QApplication([])
-    #widget = DiffractionLimitedAnalysis_UI()
-    widget = TagDataPopup()
+    widget = DiffractionLimitedAnalysis_UI()
+    #widget = TagDataPopup()
     widget.show()
     sys.exit(app.exec_())
