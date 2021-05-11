@@ -76,6 +76,11 @@ class ParticleFinder(QObject):
                 self.project.call_ComDet(self.size, self.threshold, progress_signal=self.progress)
             except:
                 print(sys.exc_info())
+        elif self.algorithm == 'Trevor':
+            try:
+                self.project.call_Trevor(self.size, self.threshold, progress_signal=progress)
+            except:
+                print(sys.exc_info())
         else:
             pass
 

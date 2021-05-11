@@ -5,7 +5,11 @@ from tqdm import tqdm
 import seaborn as sns
 import matplotlib.pyplot as plt
 import imagej
-
+from skimage import io
+from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruction
+from skimage.measure import label, regionprops
+import numpy as np
+from PIL import Image
 
 class SimPullAnalysis:
 
@@ -107,6 +111,102 @@ class SimPullAnalysis:
         return 1
 
 
+    def call_Trevor(self, erode_size, bg_thres, tophat_disk_size=10, cut_margin=True, margin_size=5, progress_signal=None):
+        if progress_signal == None: #i.e. running in non-GUI mode
+            IJ.ui().showUI()
+            workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
+        else:
+            workload = sorted(self.fov_paths)
+            c = 1 # progress indicator
+
+        for field in workload:
+            imgFile = self.fov_paths[field]
+            saveto = os.path.join(self.path_result_raw, field)
+            saveto = saveto.replace("\\", "/")
+            img = io.imread(imgFile) # Read image
+
+            if len(img.shape) == 3: # Determine if the image is a stack file with multiple slices
+                img = np.mean(img, axis=0) # If true, average the image
+            else:
+                pass # If already averaged, go on processing
+
+            tophat_disk = disk(tophat_disk_size) # create tophat structural element disk, diam = tophat_disk_size (typically set to 10)
+            tophat_img = white_tophat(img, tophat_disk) # Filter image with tophat
+            top_img_subbg = tophat_img 
+            top_img_subbg[tophat_img < bg_thres] = 0 # clean out array elements smaller than bg_thres, usually set to 40
+            binary_img = top_img_subbg 
+            binary_img[binary_img > 0] = 1 # binarise the image, non-positive elements will be set as 1
+            erode_disk = disk(erode_size) # create erode structural element disk, diam = erode_size (typically set to 2)
+            erode_img = erosion(top_img_subbg, erode_disk) # erode image, remove small dots (possibly noise)
+            dilate_img = dilation(erode_img, erode_disk) # dilate image, recover eroded elements
+
+            if cut_margin is True:
+                margin = np.ones(np.shape(img))
+                margin[0:margin_size, :] = 0
+                margin[-margin_size:, :] = 0
+                margin[:, 0:margin_size] = 0
+                margin[:, -margin_size:] = 0
+                mask = dilate_img*margin
+            else:
+                mask = dilate_img
+            masked_img = mask * img # return masked image
+
+            io.imsave(saveto + '.tif', masked_img) # save masked image as result
+
+            inverse_mask = 1 - mask
+            img_bgonly = inverse_mask * img
+            seed_img = np.copy(img_bgonly) #https://scikit-image.org/docs/dev/auto_examples/features_detection/plot_holes_and_peaks.html
+            seed_img[1:-1, 1:-1] = img_bgonly.max()
+            seed_mask = img_bgonly
+            filled_img = reconstruction(seed_img, seed_mask, method='erosion')
+            img_nobg = abs(img - filled_img)
+
+            # Label the image to index all aggregates
+            labeled_img = label(mask)
+            # *save image
+
+            intensity_list = []
+            Abs_frame = []
+            Channel = []
+            Slice = []
+            Frame = []
+
+            # Get the number of particles
+            num_aggregates = int(np.max(labeled_img))
+            # Get profiles of labeled image
+            df = regionprops_table(labeled_img, intensity_image=img, properties=['label', 'area', 'centroid', 'bbox'])
+            df = pd.DataFrame(df)
+            df.columns = ['', 'NAera', 'X_(px)', 'Y_(px)', 'xMin', 'yMin', 'xMax', 'yMax']
+            # Analyze each particle for integra
+            for j in range(0, num_aggregates):
+                current_aggregate = np.copy(labeled_img)
+                current_aggregate[current_aggregate != j + 1] = 0
+                current_aggregate[current_aggregate > 0] = 1
+                intensity = np.sum(current_aggregate * img_nobg)
+                intensity_list.append(intensity)
+                
+                Abs_frame.append(1)
+                Channel.append(1)
+                Slice.append(1)
+                Frame.append(1)
+
+            df['Abs_frame'] = Abs_frame
+            df['Channel']= Channel
+            df['Slice'] = Slice
+            df['Frame'] = Frame
+            df['IntegratedInt'] = intensity_list
+
+            df.to_csv(saveto + field +'_results.csv') # save result.csv
+
+            if progress_signal == None:
+                pass
+            else:
+                progress_signal.emit(c)
+                c += 1
+
+        return 1
+
+
     def generate_reports(self, progress_signal=None):
         if progress_signal == None: #i.e. running in non-GUI mode
             workload = tqdm(sorted(self.wells)) # using tqdm as progress bar in cmd
@@ -161,7 +261,7 @@ class SimPullAnalysis:
             try:
                 df = pd.read_csv(self.path_result_samples + '/' + well + '.csv')
                 df['Well'] = well
-                df = df[['Well','Abs_frame', 'NArea', 'IntegratedInt', 'IntPerArea']]
+                df = df[['Well','FoV', 'NArea', 'IntegratedInt', 'IntPerArea']]
                 QC_data = pd.concat([QC_data, df])
             except pd.errors.EmptyDataError:
                 pass

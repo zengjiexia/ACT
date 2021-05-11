@@ -2,20 +2,21 @@ import sys
 import os
 
 import PySide6
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QMessageBox, QProgressDialog, QFileDialog
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QMessageBox, QProgressDialog, QFileDialog, QVBoxLayout, QRadioButton, QButtonGroup
 from PySide6.QtCore import QFile, QIODevice, Slot, Qt, QThread, Signal, QRect
 from PySide6.QtUiTools import QUiLoader
 import pyqtgraph as pg
 import toolbox
 from logics import SimPullAnalysis
 import pandas as pd
-
+pg.setConfigOption('background', 'w')
 
 class DiffractionLimitedAnalysis_UI(QMainWindow):
 
     def __init__(self):
         super(DiffractionLimitedAnalysis_UI, self).__init__()
         self.loadUI()
+
 
     def loadUI(self):
 
@@ -27,8 +28,8 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
 
         class UiLoader(QUiLoader): # Enable promotion to custom widgets
             def createWidget(self, className, parent=None, name=""):
-                if className == "PlotWidget":
-                    return pg.PlotWidget(parent=parent) # promote to pyqtgraph.PlotWidget
+                #if className == "PlotWidget":
+                #    return pg.PlotWidget(parent=parent) # promote to pyqtgraph.PlotWidget
                 if className == "LogTextEdit":
                     return toolbox.LogTextEdit(parent=parent) # promote to self defined LogTextEdit(QPlainTextEdit)
                 return super().createWidget(className, parent, name)
@@ -39,6 +40,7 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         # main window widgets
         self.window.main_runButton.clicked.connect(self.clickMainWindowRun)
         self.window.main_tagButton.clicked.connect(self.clickMainWindowTag)
+        self.window.main_oaButton.clicked.connect(self.clickMainWindowOA)
 
         ui_file.close()
         if not self.window:
@@ -46,6 +48,7 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
             sys.exit(-1)
         self.window.show()
         sys.exit(app.exec_())       
+
 
     def updateLog(self, message):
         self.window.main_logBar.insertPlainText(message + '\n')
@@ -84,11 +87,12 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
     def clickMainWindowRun(self):
         guard = self._checkParameters()
         if guard == 1:
-            guard = self._runAnalysis()
-            #guard = self._generateReports() # testing solely report generation
+            #guard = self._runAnalysis()
+            guard = self._generateReports() # testing solely report generation
             #guard = self._showResult_main() # testing solely result presentation
         else:
             self.showMessage('w', 'Failed to locate particles using ComDet. Please see help.')
+
 
     def _checkParameters(self):
         #Check if data path exists
@@ -138,7 +142,7 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         # Create a QThread object
         self.PFThread = QThread()
         # Create a worker object
-        self.particleFinder = toolbox.ParticleFinder('ComDet', self.project, self.size, self.threshold)
+        self.particleFinder = toolbox.ParticleFinder('ComDet', self.project, self.size, self.threshold) #* method selection
 
         # Connect signals and slots
         self.PFThread.started.connect(self.particleFinder.run)
@@ -198,6 +202,9 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
             lambda: self.window.main_runButton.setEnabled(True) # Reset 'Run' button
             )
         self.reportThread.finished.connect(
+            lambda: self.window.main_tagButton.setEnabled(True)
+            )
+        self.reportThread.finished.connect(
             lambda: self.updateLog('Reports generated at: ' + self.project.path_result_main)
             )
         self.reportThread.finished.connect(
@@ -221,21 +228,54 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
     def clickMainWindowTag(self):
         self.tagdatapopup = TagDataPopup(parent=self)
         self.tagdatapopup.window.show()
-        self.tagdatapopup.closed.connect(
+        self.tagdatapopup.finished.connect(
             lambda: self._showResult_main()
             )
-        self.tagdatapopup.closed.connect(self.tagdatapopup.window.close)
+        self.tagdatapopup.finished.connect(self.tagdatapopup.window.close)
+        self.tagdatapopup.finished.connect(
+            lambda: self.updateLog('Tagged data saved at: ' + self.project.path_result_main)
+            )
+        self.tagdatapopup.finished.connect(
+            lambda: self.window.main_oaButton.setEnabled(True)
+            )
+        
+
+
+    def clickMainWindowOA(self):
+        self.groupingpopup = GroupingPopup(parent=self)
+        self.groupingpopup.window.show()
+        self.groupingpopup.output.connect(self._oaProcess)
+        self.groupingpopup.finished.connect(self.groupingpopup.window.close)
+
+
+    def _oaProcess(self, experimentSelection, xaxisSelection):
+        df = pd.read_csv(self.project.path_result_main + '/QC.csv')
+        if experimentSelection == 'None':
+            self.oapopup = OrthogonalAnalysisPopup(df=df, xaxis=xaxisSelection, parent=self)
+            self.oapopup.window.show()
+        else:
+            tasks = list(df[experimentSelection].unique())
+            for t in tasks:
+                t_df = df.loc[df[experimentSelection] == t]
+                self.oapopup = OrthogonalAnalysisPopup(df=t_df, xaxis=xaxisSelection, parent=self)
+                self.oapopup.window.show()
+            #* wait for one session to finish before start another
 
 
 
 class TagDataPopup(QWidget):
-    closed = Signal()
+    finished = Signal()
     def __init__(self, parent=None):
         self.parent = parent
-        self.mainWindow = self.parent.window
+        try:
+            self.mainWindow = self.parent.window
+        except AttributeError:
+            self.mainWindow = None
+
         super(TagDataPopup, self).__init__(parent=self.mainWindow)
         self.loadUI()
         
+
     def loadUI(self):
 
         path = os.path.join(os.path.dirname(__file__), "UI_form/TagDataPopup.ui")
@@ -277,7 +317,149 @@ class TagDataPopup(QWidget):
             cols_to_use = ['Well'] + list(tag_df.columns.difference(data_df.columns))
             updated_df = pd.merge(data_df, tag_df[cols_to_use], on='Well')
             updated_df.to_csv(os.path.join(self.parent.project.path_result_main, file), index=False)
-        self.closed.emit()
+        self.finished.emit()
+
+
+
+class GroupingPopup(QWidget):
+    output = Signal(str, str)
+    finished = Signal()
+    def __init__(self, parent=None):
+        self.parent = parent
+        try:
+            self.mainWindow = self.parent.window
+        except AttributeError:
+            self.mainWindow = None
+        super(GroupingPopup, self).__init__(parent=self.mainWindow)
+        self.loadUI()
+
+
+    def loadUI(self):
+
+        path = os.path.join(os.path.dirname(__file__), "UI_form/GroupingPopup.ui")
+        ui_file = QFile(path)
+        if not ui_file.open(QIODevice.ReadOnly):
+            print(f"Cannot open {ui_file_name}: {ui_file.errorString()}")
+            sys.exit(-1)
+
+        loader = QUiLoader()
+
+        self.window = loader.load(ui_file, self.mainWindow)
+        self.window.buttonBox.button(self.window.buttonBox.Apply).clicked.connect(self.clickedApply)
+
+        rm_list = ['NoOfFoV', 'ParticlePerFoV', 'MeanSize', 'MeanIntegrInt', 'MeanIntPerArea']
+        df = pd.read_csv(self.parent.project.path_result_main + '/Summary.csv')
+        self.options = list(df.columns.difference(rm_list)) + ['None']
+
+        self.window.experimentBoxLayout = QVBoxLayout(self.window.experimentBox)
+        self.window.experimentButtonGroup = QButtonGroup()
+        # list of column names remove from the grouping option
+        for c, i in enumerate(self.options):
+            if i != 'Well':
+                self.window.radioButton = QRadioButton(i)
+                self.window.experimentBoxLayout.addWidget(self.window.radioButton)
+                self.window.experimentButtonGroup.addButton(self.window.radioButton, id=c)
+            if i == 'None':
+                self.window.radioButton.setChecked(True)
+
+        self.window.xaxisBoxLayout = QVBoxLayout(self.window.xaxisBox)
+        self.window.xaxisButtonGroup = QButtonGroup()
+        # list of column names remove from the grouping option
+        for c, i in enumerate(self.options):
+            if i != 'None':
+                self.window.radioButton = QRadioButton(i)
+                self.window.xaxisBoxLayout.addWidget(self.window.radioButton)
+                self.window.xaxisButtonGroup.addButton(self.window.radioButton, id=c)
+            if i == 'Well':
+                self.window.radioButton.setChecked(True)
+
+        ui_file.close()
+        if not self.window:
+            print(loader.errorString())
+            sys.exit(-1)
+
+
+    def clickedApply(self):
+        experimentSelection = self.window.experimentButtonGroup.checkedId()
+        xaxisSelection = self.window.xaxisButtonGroup.checkedId()
+        if experimentSelection == xaxisSelection:
+            msgBox = QMessageBox(self.mainWindow)
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setWindowTitle('Warning')
+            msgBox.setText('Cannot select the same condition.')
+            returnValue = msgBox.exec_()
+        else:
+            self.output.emit(self.options[experimentSelection], self.options[xaxisSelection])
+            self.finished.emit()
+
+
+
+class OrthogonalAnalysisPopup(QWidget):
+    finished = Signal()
+    def __init__(self, df, xaxis, parent=None):
+        self.parent = parent
+        self.org_df = df
+        self.xaxis = xaxis
+
+        try:
+            self.mainWindow = self.parent.window
+        except AttributeError:
+            self.mainWindow = None
+        super(OrthogonalAnalysisPopup, self).__init__(parent=self.mainWindow)
+        self.loadUI()
+        
+
+    def loadUI(self):
+
+        path = os.path.join(os.path.dirname(__file__), "UI_form/OrthogonalAnalysisPopup.ui")
+        ui_file = QFile(path)
+        if not ui_file.open(QIODevice.ReadOnly):
+            print(f"Cannot open {ui_file_name}: {ui_file.errorString()}")
+            sys.exit(-1)
+
+        class UiLoader(QUiLoader): # Enable promotion to custom widgets
+            def createWidget(self, className, parent=None, name=""):
+                if className == "PlotWidget":
+                    return pg.PlotWidget(parent=parent) # promote to pyqtgraph.PlotWidget
+                return super().createWidget(className, parent, name)
+
+        loader = UiLoader()
+
+        self.window = loader.load(ui_file, self.mainWindow)
+        self.window.oa_applyButton.clicked.connect(self.function1)
+        self._updatePlots(self.org_df)
+
+        ui_file.close()
+        if not self.window:
+            print(loader.errorString())
+            sys.exit(-1)
+
+
+    def _updatePlots(self, df):
+        # Particle plot
+        rm_list = ['FoV', 'NArea', 'IntegratedInt', 'IntPerArea']
+        keep_list = list(df.columns.difference(rm_list)) # get list of conditions
+        sum_df = df.groupby(keep_list+ ['FoV']).size()
+        sum_df = sum_df.reset_index(drop=False)
+        sum_df = sum_df.groupby(keep_list).mean()
+        sum_df = sum_df.reset_index(drop=False)
+        sum_df = sum_df.rename(columns={0: "ParticlePerFoV"})
+        
+        ### Set string axis # use well if no x-axis selected
+        xdict = dict(enumerate(sum_df[self.xaxis]))
+        stringaxis = pg.AxisItem(orientation='bottom')
+        stringaxis.setTicks([xdict.items()])
+        self.window.oa_particlePlot.setAxisItems(axisItems = {'bottom': stringaxis}) 
+
+        particle_plot = self.window.oa_particlePlot.plot()
+        particle_plot.setPen((200,200,100))
+        particle_plot.setData(x=list(xdict.keys()), y=sum_df.ParticlePerFoV)
+
+        # IntPerArea plot
+
+        # NArea plot
+    def function1(self):
+        print('1111')
 
 
 
@@ -285,6 +467,5 @@ if __name__ == "__main__":
 
     app = QApplication([])
     widget = DiffractionLimitedAnalysis_UI()
-    #widget = TagDataPopup()
     widget.show()
     sys.exit(app.exec_())
