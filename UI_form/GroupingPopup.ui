@@ -55,6 +55,27 @@
     <string>x-axis</string>
    </property>
   </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>10</y>
+     <width>381</width>
+     <height>121</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>𝐂𝐨𝐧𝐝𝐢𝐭𝐢𝐨𝐧 𝐒𝐞𝐥𝐞𝐜𝐭𝐢𝐨𝐧
+ Please select the tagged condition which would split the data in different experiments in the first box.
+ Please select the tagged condition which you want to use as the x-axis in data plot in the second box.</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections>

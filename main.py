@@ -9,6 +9,7 @@ import pyqtgraph as pg
 import toolbox
 from logics import SimPullAnalysis
 import pandas as pd
+import numpy as np
 pg.setConfigOption('background', 'w')
 
 class DiffractionLimitedAnalysis_UI(QMainWindow):
@@ -427,7 +428,8 @@ class OrthogonalAnalysisPopup(QWidget):
 
         self.window = loader.load(ui_file, self.mainWindow)
         self.window.oa_applyButton.clicked.connect(self.function1)
-        self._updatePlots(self.org_df)
+        self._updateParticlePlot(self.org_df)
+        self._plotIntnArea()
 
         ui_file.close()
         if not self.window:
@@ -435,7 +437,7 @@ class OrthogonalAnalysisPopup(QWidget):
             sys.exit(-1)
 
 
-    def _updatePlots(self, df):
+    def _updateParticlePlot(self, df):
         # Particle plot
         rm_list = ['FoV', 'NArea', 'IntegratedInt', 'IntPerArea']
         keep_list = list(df.columns.difference(rm_list)) # get list of conditions
@@ -450,14 +452,31 @@ class OrthogonalAnalysisPopup(QWidget):
         stringaxis = pg.AxisItem(orientation='bottom')
         stringaxis.setTicks([xdict.items()])
         self.window.oa_particlePlot.setAxisItems(axisItems = {'bottom': stringaxis}) 
+        self.window.oa_particlePlot.showGrid(y=True)
 
-        particle_plot = self.window.oa_particlePlot.plot()
-        particle_plot.setPen((200,200,100))
-        particle_plot.setData(x=list(xdict.keys()), y=sum_df.ParticlePerFoV)
+        self.window.oa_particlePlot.plot(x=list(xdict.keys()), y=sum_df.ParticlePerFoV, pen=(0,0,0))
+        
 
+
+    def _plotIntnArea(self):
+        def plotHist(widget, fig_type, condition, color):
+            df = self.org_df.loc[self.org_df[self.xaxis] == condition]
+            y, x = np.histogram(df[fig_type],bins=np.linspace(0,df[fig_type].max(),800))
+            widget.plot(x, y, name=condition, pen=pg.intColor(color), stepMode='center', fillLevel=50, fillOutline=True)
+        
         # IntPerArea plot
+        self.window.oa_intperareaPlot.addLegend()
+        for c, i in enumerate(self.org_df[self.xaxis].unique()):
+            plotHist(self.window.oa_intperareaPlot, 'IntPerArea', i, c)
+        
 
         # NArea plot
+        self.window.oa_nareaPlot.addLegend()
+        nArea_plot = self.window.oa_nareaPlot.plot()
+        for c, i in enumerate(self.org_df[self.xaxis].unique()):
+            plotHist(self.window.oa_nareaPlot, 'NArea', i, c)
+        
+
     def function1(self):
         print('1111')
 
