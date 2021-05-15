@@ -5,6 +5,7 @@ import PySide6
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QMessageBox, QProgressDialog, QFileDialog, QVBoxLayout, QRadioButton, QButtonGroup
 from PySide6.QtCore import QFile, QIODevice, Slot, Qt, QThread, Signal, QRect
 from PySide6.QtUiTools import QUiLoader
+from PySide6.QtGui import QIcon
 import pyqtgraph as pg
 import toolbox
 from logics import SimPullAnalysis
@@ -88,8 +89,8 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
     def clickMainWindowRun(self):
         guard = self._checkParameters()
         if guard == 1:
-            #guard = self._runAnalysis()
-            guard = self._generateReports() # testing solely report generation
+            guard = self._runAnalysis()
+            #guard = self._generateReports() # testing solely report generation
             #guard = self._showResult_main() # testing solely result presentation
         else:
             self.showMessage('w', 'Failed to locate particles using ComDet. Please see help.')
@@ -143,7 +144,7 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         # Create a QThread object
         self.PFThread = QThread()
         # Create a worker object
-        self.particleFinder = toolbox.ParticleFinder('ComDet', self.project, self.size, self.threshold) #* method selection
+        self.particleFinder = toolbox.ParticleFinder(self.window.main_methodSelector.currentText(), self.project, self.size, self.threshold)
 
         # Connect signals and slots
         self.PFThread.started.connect(self.particleFinder.run)
@@ -241,7 +242,6 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
             )
         
 
-
     def clickMainWindowOA(self):
         self.groupingpopup = GroupingPopup(parent=self)
         self.groupingpopup.window.show()
@@ -254,13 +254,14 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         if experimentSelection == 'None':
             self.oapopup = OrthogonalAnalysisPopup(df=df, xaxis=xaxisSelection, parent=self)
             self.oapopup.window.show()
+            self.oapopup.finished.connect(self.oapopup.window.close)
         else:
             tasks = list(df[experimentSelection].unique())
             for t in tasks:
                 t_df = df.loc[df[experimentSelection] == t]
                 self.oapopup = OrthogonalAnalysisPopup(df=t_df, xaxis=xaxisSelection, parent=self)
                 self.oapopup.window.show()
-            #* wait for one session to finish before start another
+                self.oapopup.finished.connect(self.oapopup.window.close)
 
 
 
@@ -401,6 +402,7 @@ class OrthogonalAnalysisPopup(QWidget):
         self.parent = parent
         self.org_df = df
         self.xaxis = xaxis
+        self.thresholded_df = self.org_df
 
         try:
             self.mainWindow = self.parent.window
@@ -427,7 +429,13 @@ class OrthogonalAnalysisPopup(QWidget):
         loader = UiLoader()
 
         self.window = loader.load(ui_file, self.mainWindow)
-        self.window.oa_applyButton.clicked.connect(self.function1)
+        self.window.setWindowTitle('Orthogonal Analysis - ' + self.xaxis)
+
+        self.window.oa_applyButton.clicked.connect(self.applyThresholds)
+        self.window.oa_defaultButton.clicked.connect(self.resetDefault)
+        self.window.oa_saveResultButton.clicked.connect(self.saveData)
+        self.window.oa_cancelButton.clicked.connect(self.cancel)
+
         self._updateParticlePlot(self.org_df)
         self._plotIntnArea()
 
@@ -438,6 +446,7 @@ class OrthogonalAnalysisPopup(QWidget):
 
 
     def _updateParticlePlot(self, df):
+        self.window.oa_particlePlot.clear()
         # Particle plot
         rm_list = ['FoV', 'NArea', 'IntegratedInt', 'IntPerArea']
         keep_list = list(df.columns.difference(rm_list)) # get list of conditions
@@ -448,43 +457,101 @@ class OrthogonalAnalysisPopup(QWidget):
         sum_df = sum_df.rename(columns={0: "ParticlePerFoV"})
         
         ### Set string axis # use well if no x-axis selected
-        xdict = dict(enumerate(sum_df[self.xaxis]))
-        stringaxis = pg.AxisItem(orientation='bottom')
-        stringaxis.setTicks([xdict.items()])
-        self.window.oa_particlePlot.setAxisItems(axisItems = {'bottom': stringaxis}) 
+        self.xdict = dict(enumerate(sum_df[self.xaxis]))
+        self.stringaxis = pg.AxisItem(orientation='bottom')
+        self.stringaxis.setTicks([self.xdict.items()])
+        self.window.oa_particlePlot.setAxisItems(axisItems = {'bottom': self.stringaxis})
         self.window.oa_particlePlot.showGrid(y=True)
-
-        self.window.oa_particlePlot.plot(x=list(xdict.keys()), y=sum_df.ParticlePerFoV, pen=(0,0,0))
-        
+        self.window.oa_particlePlot.setMouseEnabled(y=False)
+        self.window.oa_particlePlot.setLabel('left', 'Particle per FoV')
+        self.window.oa_particlePlot.setLabel('bottom', self.xaxis)
+        self.window.oa_particlePlot.setRange(xRange=[0, np.max(list(self.xdict.keys()))])
+        self.window.oa_particlePlot.plot(x=list(self.xdict.keys()), y=sum_df.ParticlePerFoV, pen=(0,0,0,255))
 
 
     def _plotIntnArea(self):
+
         def plotHist(widget, fig_type, condition, color):
+            color = list(pg.colorTuple(pg.intColor(color)))
+            color[3] = 100
+            color = tuple(color)
+
             df = self.org_df.loc[self.org_df[self.xaxis] == condition]
-            y, x = np.histogram(df[fig_type],bins=np.linspace(0,df[fig_type].max(),800))
-            widget.plot(x, y, name=condition, pen=pg.intColor(color), stepMode='center', fillLevel=50, fillOutline=True)
-        
+            y, x = np.histogram(df[fig_type], bins=np.linspace(0, df[fig_type].max(), 100)) #* change bin size?
+            bg = pg.BarGraphItem(x=x[:len(y)], name=condition, height=y, width=(x[1]-x[0]), brush=color)
+            widget.addItem(bg)
+
+
         # IntPerArea plot
         self.window.oa_intperareaPlot.addLegend()
+        self.window.oa_intperareaPlot.setMouseEnabled(y=False)
+        self.window.oa_intperareaPlot.setLabel('left', 'Count')
+        self.window.oa_intperareaPlot.setLabel('bottom', 'Intensity per Area')
+
+        self.window.oa_intperareaPlotLine = pg.InfiniteLine(angle=90, movable=True, pen='r')
+        self.window.oa_intperareaPlot.addItem(self.window.oa_intperareaPlotLine, ignoreBounds=True)
+
         for c, i in enumerate(self.org_df[self.xaxis].unique()):
             plotHist(self.window.oa_intperareaPlot, 'IntPerArea', i, c)
         
 
         # NArea plot
         self.window.oa_nareaPlot.addLegend()
-        nArea_plot = self.window.oa_nareaPlot.plot()
+        self.window.oa_nareaPlot.setMouseEnabled(y=False)
+        self.window.oa_nareaPlot.setLabel('left', 'Count')
+        self.window.oa_nareaPlot.setLabel('bottom', 'Size', units='pixels')
+
+        self.window.oa_nareaPlotLine = pg.InfiniteLine(angle=90, movable=True, pen='r')
+        self.window.oa_nareaPlot.addItem(self.window.oa_nareaPlotLine, ignoreBounds=True)
+
         for c, i in enumerate(self.org_df[self.xaxis].unique()):
             plotHist(self.window.oa_nareaPlot, 'NArea', i, c)
         
 
-    def function1(self):
-        print('1111')
+    def applyThresholds(self):
+        self.thresholded_df = self.org_df.loc[self.org_df.IntPerArea >= self.window.oa_intperareaPlotLine.value()]
+        self.thresholded_df = self.thresholded_df.loc[self.thresholded_df.NArea >= self.window.oa_nareaPlotLine.value()]
+
+        self._updateParticlePlot(self.thresholded_df)
+
+
+    def resetDefault(self):
+        self.thresholded_df = self.org_df
+        self._updateParticlePlot(self.org_df)
+
+
+    def saveData(self):
+        self.applyThresholds()
+
+        thred_path = self.parent.project.path_result_main + '/Thred_results'
+        if os.path.isdir(thred_path) != True:
+            os.mkdir(thred_path)
+        rm_list = ['FoV', 'NArea', 'IntegratedInt', 'IntPerArea']
+        keep_list = list(self.thresholded_df.columns.difference(rm_list)) # get list of conditions
+        output_df = self.thresholded_df.groupby(keep_list+ ['FoV']).size()
+        output_df = output_df.reset_index(drop=False)
+        output_df = output_df.groupby(keep_list).mean()
+        output_df = output_df.reset_index(drop=False)
+        output_df = output_df.rename(columns={0: "ParticlePerFoV"})
+
+        output_df['thred_IntPerArea'] = self.window.oa_intperareaPlotLine.value()
+        output_df['thred_NArea'] = self.window.oa_nareaPlotLine.value()
+        output_df.to_csv(thred_path + '/' + self.xaxis + '.csv')
+        try:
+            self.finished.emit()
+        except:
+            print(sys.exc_info())
+
+
+    def cancel(self):
+        self.finished.emit()
 
 
 
 if __name__ == "__main__":
 
     app = QApplication([])
-    widget = DiffractionLimitedAnalysis_UI()
-    widget.show()
+    app.setWindowIcon(QIcon(os.path.join(os.path.dirname(__file__), "UI_form/lulu.ico")))
+    main_window = DiffractionLimitedAnalysis_UI()
+    main_window.show()
     sys.exit(app.exec_())

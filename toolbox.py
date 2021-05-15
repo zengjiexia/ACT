@@ -78,7 +78,7 @@ class ParticleFinder(QObject):
                 print(sys.exc_info())
         elif self.algorithm == 'Trevor':
             try:
-                self.project.call_Trevor(self.size, self.threshold, progress_signal=progress)
+                self.project.call_Trevor(self.size, self.threshold, progress_signal=self.progress)
             except:
                 print(sys.exc_info())
         else:

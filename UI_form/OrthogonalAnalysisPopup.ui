@@ -69,7 +69,7 @@
     <string>Reset to default</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="oa_saveresultButton">
+  <widget class="QPushButton" name="oa_saveResultButton">
    <property name="geometry">
     <rect>
      <x>190</x>

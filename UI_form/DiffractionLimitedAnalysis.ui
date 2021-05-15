@@ -58,7 +58,7 @@
     </property>
     <widget class="QWidget" name="mainTab">
      <attribute name="title">
-      <string>Main</string>
+      <string>DFL SiMPull</string>
      </attribute>
      <widget class="QGroupBox" name="main_runBox">
       <property name="geometry">
@@ -140,6 +140,20 @@
          </property>
         </widget>
        </item>
+       <item row="0" column="4">
+        <widget class="QComboBox" name="main_methodSelector">
+         <item>
+          <property name="text">
+           <string>ComDet</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Trevor</string>
+          </property>
+         </item>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QGroupBox" name="main_resultBox">
@@ -174,7 +188,7 @@
        <item row="2" column="1">
         <widget class="QPushButton" name="main_oaButton">
          <property name="enabled">
-          <bool>true</bool>
+          <bool>false</bool>
          </property>
          <property name="text">
           <string>Orthogonal analysis</string>

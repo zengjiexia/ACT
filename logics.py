@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import imagej
 from skimage import io
 from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruction
-from skimage.measure import label, regionprops
+from skimage.measure import label, regionprops_table
 import numpy as np
 from PIL import Image
 
@@ -176,7 +176,7 @@ class SimPullAnalysis:
             # Get profiles of labeled image
             df = regionprops_table(labeled_img, intensity_image=img, properties=['label', 'area', 'centroid', 'bbox'])
             df = pd.DataFrame(df)
-            df.columns = ['', 'NAera', 'X_(px)', 'Y_(px)', 'xMin', 'yMin', 'xMax', 'yMax']
+            df.columns = [' ', 'NArea', 'X_(px)', 'Y_(px)', 'xMin', 'yMin', 'xMax', 'yMax']
             # Analyze each particle for integra
             for j in range(0, num_aggregates):
                 current_aggregate = np.copy(labeled_img)
@@ -196,7 +196,7 @@ class SimPullAnalysis:
             df['Frame'] = Frame
             df['IntegratedInt'] = intensity_list
 
-            df.to_csv(saveto + field +'_results.csv') # save result.csv
+            df.to_csv(saveto + '_results.csv', index=False) # save result.csv
 
             if progress_signal == None:
                 pass
