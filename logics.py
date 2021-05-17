@@ -2,14 +2,11 @@ import os
 import re
 import pandas as pd
 from tqdm import tqdm
-import seaborn as sns
-import matplotlib.pyplot as plt
 import imagej
 from skimage import io
 from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruction
 from skimage.measure import label, regionprops_table
 import numpy as np
-from PIL import Image
 
 class SimPullAnalysis:
 
