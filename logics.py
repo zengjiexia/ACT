@@ -200,7 +200,6 @@ class SimPullAnalysis:
             else:
                 progress_signal.emit(c)
                 c += 1
-
         return 1
 
 

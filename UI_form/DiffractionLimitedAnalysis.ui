@@ -303,11 +303,65 @@
     </property>
     <addaction name="actionLoad"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionRun_analysis"/>
+    <addaction name="actionGenerate_reports"/>
+    <addaction name="actionRead_tagged_results"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <widget class="QMenu" name="menuMethod_instruction">
+     <property name="title">
+      <string>Method instruction</string>
+     </property>
+     <addaction name="actionComDet"/>
+     <addaction name="actionTrevor"/>
+    </widget>
+    <addaction name="menuMethod_instruction"/>
+    <addaction name="actionProgram_frozen"/>
+   </widget>
    <addaction name="mainMenu"/>
+   <addaction name="menuTools"/>
+   <addaction name="menuHelp"/>
   </widget>
   <action name="actionLoad">
    <property name="text">
     <string>Load...</string>
+   </property>
+  </action>
+  <action name="actionGenerate_reports">
+   <property name="text">
+    <string>Generate reports</string>
+   </property>
+  </action>
+  <action name="actionRead_tagged_results">
+   <property name="text">
+    <string>Read tagged results</string>
+   </property>
+  </action>
+  <action name="actionComDet">
+   <property name="text">
+    <string>ComDet</string>
+   </property>
+  </action>
+  <action name="actionTrevor">
+   <property name="text">
+    <string>Trevor</string>
+   </property>
+  </action>
+  <action name="actionProgram_frozen">
+   <property name="text">
+    <string>Program frozen</string>
+   </property>
+  </action>
+  <action name="actionRun_analysis">
+   <property name="text">
+    <string>Run analysis</string>
    </property>
   </action>
  </widget>

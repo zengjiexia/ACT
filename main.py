@@ -43,6 +43,13 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         self.window.main_runButton.clicked.connect(self.clickMainWindowRun)
         self.window.main_tagButton.clicked.connect(self.clickMainWindowTag)
         self.window.main_oaButton.clicked.connect(self.clickMainWindowOA)
+        self.window.actionLoad.triggered.connect(self.loadDataPath)
+        self.window.actionRun_analysis.triggered.connect(self.clickMainWindowRun)
+        self.window.actionGenerate_reports.triggered.connect(self.clickGenerateReports)
+        self.window.actionRead_tagged_results.triggered.connect(self.clickReadTaggedResults)
+        self.window.actionComDet.triggered.connect(self.helpComDet)
+        self.window.actionTrevor.triggered.connect(self.helpTrevor)
+        self.window.actionProgram_frozen.triggered.connect(self.helpFrozen)
 
         ui_file.close()
         if not self.window:
@@ -82,25 +89,61 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         elif msg_type == 'w':
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle('Warning')
+        elif msg_type == 'i':
+            msgBox.setIcon(QMessageBox.Information)
+            msgBox.setWindowTitle('Information')
         msgBox.setText(message)
         returnValue = msgBox.exec_()
+
+
+    def loadDataPath(self):
+        data_path = QFileDialog.getExistingDirectory(parent=self.window, caption='Browse path for data.', dir=os.path.dirname(__file__))
+        self.window.main_pathEntry.setText(data_path)
 
 
     def clickMainWindowRun(self):
         guard = self._checkParameters()
         if guard == 1:
             guard = self._runAnalysis()
-            #guard = self._generateReports() # testing solely report generation
-            #guard = self._showResult_main() # testing solely result presentation
         else:
-            self.showMessage('w', 'Failed to locate particles using ComDet. Please see help.')
+            self.showMessage('w', 'Error in parameters. Please check again.')
+
+
+    def clickGenerateReports(self):
+        data_path = self.window.main_pathEntry.text()
+        data_path = data_path.replace('_results', '')
+        guard = self._checkParameters()
+        if guard == 1:
+            if os.path.isdir(data_path + '_results') ==False:
+                self.showMessage('w', 'This dataset has not been analysed. Please run analysis.')
+            else:
+                self.data_path = data_path
+                self.window.main_pathEntry.setText(self.data_path)
+                self.updateLog('Data path set to '+data_path)
+                self._generateReports()
+
+
+    def clickReadTaggedResults(self):
+        data_path = self.window.main_pathEntry.text()
+        data_path = data_path.replace('_results', '')
+        guard = self._checkParameters()
+        if guard == 1:
+            if os.path.isdir(data_path + '_results') ==False:
+                self.showMessage('w', 'This dataset has not been analysed. Please run analysis.')
+            else:
+                self.data_path = data_path
+                self.window.main_pathEntry.setText(self.data_path)
+                self.updateLog('Data path set to '+data_path)
+                self._showResult_main()
+                self.window.main_tagButton.setEnabled(True)
+                self.window.main_oaButton.setEnabled(True)
 
 
     def _checkParameters(self):
         #Check if data path exists
         data_path = self.window.main_pathEntry.text()
         if os.path.isdir(data_path) == False:
-            self.showMessage('w', 'Error: Path to folder not found.')
+            self.showMessage('w', 'Path to folder not found.')
             return 0
         else:
             self.data_path = data_path
@@ -170,7 +213,6 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         self.PFThread.finished.connect(
             lambda: self.restProgress()
             ) # Reset progress bar to rest
-
         try:
             self.PFThread.finished.connect(
                 lambda: self._generateReports()
@@ -212,7 +254,6 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         self.reportThread.finished.connect(
             lambda: self.restProgress()
             ) # Reset progress bar to rest
-
         try:
             self.reportThread.finished.connect(
                 lambda: self._showResult_main()
@@ -252,17 +293,41 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
     def _oaProcess(self, experimentSelection, xaxisSelection):
         df = pd.read_csv(self.project.path_result_main + '/QC.csv')
         if experimentSelection == 'None':
-            self.oapopup = OrthogonalAnalysisPopup(df=df, xaxis=xaxisSelection, parent=self)
+            self.oapopup = OrthogonalAnalysisPopup(task='All', df=df, xaxis=xaxisSelection, parent=self)
             self.oapopup.window.show()
             self.oapopup.finished.connect(self.oapopup.window.close)
         else:
             tasks = list(df[experimentSelection].unique())
             for t in tasks:
                 t_df = df.loc[df[experimentSelection] == t]
-                self.oapopup = OrthogonalAnalysisPopup(df=t_df, xaxis=xaxisSelection, parent=self)
+                self.oapopup = OrthogonalAnalysisPopup(task=t, df=t_df, xaxis=xaxisSelection, parent=self)
                 self.oapopup.window.show()
                 self.oapopup.finished.connect(self.oapopup.window.close)
 
+
+    def helpComDet(self):
+        self.showMessage('i', r"""                                                      ComDet
+Parameters:
+    Threshold: signal to noise ratio between particles and local background
+    Size: estimated size of particles (can be larger than the estimation)
+
+My (Ron's) way of using this method is to detect all the spots in images, regardless they are background noise or actual particles. Then use the orthogonal analysis to set a threshold on intensity per area to remove the noise. Hence I would use a very low threshold for particle detection - normally 3SD.
+
+Please see https://github.com/ekatrukha/ComDet/wiki/How-does-detection-work%3F for details in how the detection works.
+            """)
+
+
+    def helpTrevor(self):
+        self.showMessage('i', r"""                                                      Trevor
+This method is still under development. Please contact Trevor Wu (yw525@cam.ac.uk) for further information.
+            """)
+
+
+    def helpFrozen(self):
+        self.showMessage('i', r"""
+If you encountered program freezing with the progress bar reached 100%, please restart the program and re-run the step you got stuck with (from the Tools command list).
+Please contact Ron Xia (zx252@cam.ac.uk) if you keep having this problem. This is a known bug in the program which should be fixed in later releases. Thanks for your understanding.
+            """)
 
 
 class TagDataPopup(QWidget):
@@ -398,8 +463,9 @@ class GroupingPopup(QWidget):
 
 class OrthogonalAnalysisPopup(QWidget):
     finished = Signal()
-    def __init__(self, df, xaxis, parent=None):
+    def __init__(self, task, df, xaxis, parent=None):
         self.parent = parent
+        self.task = task
         self.org_df = df
         self.xaxis = xaxis
         self.thresholded_df = self.org_df
@@ -429,7 +495,7 @@ class OrthogonalAnalysisPopup(QWidget):
         loader = UiLoader()
 
         self.window = loader.load(ui_file, self.mainWindow)
-        self.window.setWindowTitle('Orthogonal Analysis - ' + self.xaxis)
+        self.window.setWindowTitle('Orthogonal Analysis - ' + self.task)
 
         self.window.oa_applyButton.clicked.connect(self.applyThresholds)
         self.window.oa_defaultButton.clicked.connect(self.resetDefault)
@@ -536,7 +602,8 @@ class OrthogonalAnalysisPopup(QWidget):
 
         output_df['thred_IntPerArea'] = self.window.oa_intperareaPlotLine.value()
         output_df['thred_NArea'] = self.window.oa_nareaPlotLine.value()
-        output_df.to_csv(thred_path + '/' + self.xaxis + '.csv')
+        output_df.to_csv(thred_path + '/' + self.task  + '.csv')
+        self.parent.updateLog('Thresholded result saved as ' + thred_path + '/' + self.task  + '.csv.')
         try:
             self.finished.emit()
         except:
