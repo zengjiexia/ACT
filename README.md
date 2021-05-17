@@ -14,6 +14,7 @@ Requirements
 	- os
 	- sys
 	- re
+	- tqdm
 	- [numpy](https://numpy.org/)
 	- [pandas](https://pandas.pydata.org/)
 	- [scikit-image](https://scikit-image.org/)
@@ -24,10 +25,20 @@ Requirements
 - [Fiji(is just imagej)](https://imagej.net/Fiji) 
 	- [ComDet](https://github.com/ekatrukha/ComDet)
 
+Installation
+------------
+Please install Anaconda for environment management.
+```sh
+cd /path-to-folder/
+setup_conda_env.bat
+```
+
 Usage
 -----
 *The program only support windows system for now*
+
 Command line tool:
 ```sh
+conda activate DLA_python3
 python /path_to/main.py
 ```
