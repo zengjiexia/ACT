@@ -61,19 +61,20 @@ class ParticleFinder(QObject):
     finished = Signal()
     progress = Signal(int)
 
-    def __init__(self, algorithm, project, size, threshold):
+    def __init__(self, algorithm, project, size, threshold, IJ):
         super().__init__()
 
         self.algorithm = algorithm
         self.project = project
         self.size = size
         self.threshold = threshold
+        self.IJ = IJ
 
     @QtCore.Slot()
     def run(self):
         if self.algorithm == 'ComDet':
             try:
-                self.project.call_ComDet(self.size, self.threshold, progress_signal=self.progress)
+                self.project.call_ComDet(self.size, self.threshold, progress_signal=self.progress, IJ=self.IJ)
             except:
                 print(sys.exc_info())
         elif self.algorithm == 'Trevor':

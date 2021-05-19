@@ -11,6 +11,7 @@ import toolbox
 from logics import SimPullAnalysis
 import pandas as pd
 import numpy as np
+import imagej
 pg.setConfigOption('background', 'w')
 
 class DiffractionLimitedAnalysis_UI(QMainWindow):
@@ -18,7 +19,6 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
     def __init__(self):
         super(DiffractionLimitedAnalysis_UI, self).__init__()
         self.loadUI()
-
 
     def loadUI(self):
 
@@ -39,6 +39,9 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         loader = UiLoader()
         self.window = loader.load(ui_file, self)
 
+        self.path_fiji = os.path.join(os.path.dirname(__file__), 'Fiji.app')
+        self.IJ = imagej.init(self.path_fiji, headless=False)
+
         # main window widgets
         self.window.main_runButton.clicked.connect(self.clickMainWindowRun)
         self.window.main_tagButton.clicked.connect(self.clickMainWindowTag)
@@ -56,7 +59,7 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
             print(loader.errorString())
             sys.exit(-1)
         self.window.show()
-        sys.exit(app.exec_())       
+        sys.exit(app.exec_())
 
 
     def updateLog(self, message):
@@ -187,7 +190,7 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         # Create a QThread object
         self.PFThread = QThread()
         # Create a worker object
-        self.particleFinder = toolbox.ParticleFinder(self.window.main_methodSelector.currentText(), self.project, self.size, self.threshold)
+        self.particleFinder = toolbox.ParticleFinder(self.window.main_methodSelector.currentText(), self.project, self.size, self.threshold, self.IJ)
 
         # Connect signals and slots
         self.PFThread.started.connect(self.particleFinder.run)
@@ -308,7 +311,7 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
     def helpComDet(self):
         self.showMessage('i', r"""                                                      ComDet
 Parameters:
-    Threshold: signal to noise ratio between particles and local background
+    Threshold: signal to noise ratio
     Size: estimated size of particles (can be larger than the estimation)
 
 My (Ron's) way of using this method is to detect all the spots in images, regardless they are background noise or actual particles. Then use the orthogonal analysis to set a threshold on intensity per area to remove the noise. Hence I would use a very low threshold for particle detection - normally 3SD.
@@ -368,12 +371,15 @@ class TagDataPopup(QWidget):
 
 
     def clickLoadButton(self):
-        self.path_tags = QFileDialog.getOpenFileName(parent=self.window, caption='Select tags source', dir=os.path.dirname(__file__), filter="Text files (*.csv)")
-        self.path_tags = list(self.path_tags)[0]
-        self.window.pathLabel.setText(self.path_tags)
-        df = pd.read_csv(self.path_tags)
-        model = toolbox.PandasModel(df)
-        self.window.tagsTableView.setModel(model)
+        self.path_tags = QFileDialog.getOpenFileName(parent=self.window, caption='Select tags source', dir=self.parent.project.path_data_main, filter="Text files (*.csv)")
+        try:
+            self.path_tags = list(self.path_tags)[0]
+            self.window.pathLabel.setText(self.path_tags)
+            df = pd.read_csv(self.path_tags)
+            model = toolbox.PandasModel(df)
+            self.window.tagsTableView.setModel(model)
+        except FileNotFoundError:
+            pass
 
 
     def _applyTags(self):
@@ -465,7 +471,7 @@ class OrthogonalAnalysisPopup(QWidget):
     finished = Signal()
     def __init__(self, task, df, xaxis, parent=None):
         self.parent = parent
-        self.task = task
+        self.task = str(task)
         self.org_df = df
         self.xaxis = xaxis
         self.thresholded_df = self.org_df

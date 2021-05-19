@@ -65,36 +65,62 @@ class SimPullAnalysis:
         return naming_system
 
 
-    def call_ComDet(self, size, threshold, progress_signal=None):
-        path_fiji = os.path.join(self.path_program, 'Fiji.app')
-        IJ = imagej.init(path_fiji, headless=False)
+    def call_ComDet(self, size, threshold, progress_signal=None, IJ=None):
+
         if progress_signal == None: #i.e. running in non-GUI mode
+            path_fiji = os.path.join(self.path_program, 'Fiji.app')
+            IJ = imagej.init(path_fiji, headless=False)
             IJ.ui().showUI()
             workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
         else:
             workload = sorted(self.fov_paths)
             c = 1 # progress indicator
+
+        #Check if the images are stack, and choose correct macro
+        test_img = io.imread(list(self.fov_paths.values())[0])
+        if len(test_img.shape) == 3: 
+            stacked = True
+        else:
+            stacked = False
+
         for field in workload:
             imgFile = self.fov_paths[field]
             saveto = os.path.join(self.path_result_raw, field)
             saveto = saveto.replace("\\", "/")
             img = IJ.io().open(imgFile)
             IJ.ui().show(field, img)
-            macro = """
-            run("Z Project...", "projection=[Average Intensity]");
-            run("Detect Particles", "ch1i ch1a="""+str(size)+""" ch1s="""+str(threshold)+""" rois=Ovals add=Nothing summary=Reset");
-            selectWindow('Results');
-            saveAs("Results", \""""+saveto+"""_results.csv\");
-            close("Results");
-            selectWindow('Summary');
-            saveAs("Results", \""""+saveto+"""_summary.txt\");
-            close(\""""+field+"""_summary.txt\");
-            selectWindow(\"AVG_"""+field+"""\");
-            saveAs("tif", \""""+saveto+""".tif\");
-            close();
-            close();
-            """
-            IJ.py.run_macro(macro)
+
+            if stacked:
+                macro = """
+                run("Z Project...", "projection=[Average Intensity]");
+                run("Detect Particles", "ch1i ch1a="""+str(size)+""" ch1s="""+str(threshold)+""" rois=Ovals add=Nothing summary=Reset");
+                selectWindow('Results');
+                saveAs("Results", \""""+saveto+"""_results.csv\");
+                close("Results");
+                selectWindow('Summary');
+                saveAs("Results", \""""+saveto+"""_summary.txt\");
+                close(\""""+field+"""_summary.txt\");
+                selectWindow(\"AVG_"""+field+"""\");
+                saveAs("tif", \""""+saveto+""".tif\");
+                close();
+                close();
+                """
+                IJ.py.run_macro(macro)
+            else:
+                macro = """
+                run("Detect Particles", "ch1i ch1a="""+str(size)+""" ch1s="""+str(threshold)+""" rois=Ovals add=Nothing summary=Reset");
+                selectWindow('Results');
+                saveAs("Results", \""""+saveto+"""_results.csv\");
+                close("Results");
+                selectWindow('Summary');
+                saveAs("Results", \""""+saveto+"""_summary.txt\");
+                close(\""""+field+"""_summary.txt\");
+                selectWindow(\""""+field+"""\");
+                saveAs("tif", \""""+saveto+""".tif\");
+                close();
+                """
+                IJ.py.run_macro(macro)
+
             if progress_signal == None:
                 pass
             else:
@@ -104,13 +130,18 @@ class SimPullAnalysis:
         if progress_signal == None:
             IJ.py.run_macro("""run("Quit")""")
         else:
-            IJ.getContext().dispose()
+            IJ.py.run_macro("""
+                if (isOpen("Log")) {
+                 selectWindow("Log");
+                 run("Close" );
+                }
+                """)
+
         return 1
 
 
     def call_Trevor(self, erode_size, bg_thres, tophat_disk_size=10, cut_margin=True, margin_size=5, progress_signal=None):
         if progress_signal == None: #i.e. running in non-GUI mode
-            IJ.ui().showUI()
             workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
         else:
             workload = sorted(self.fov_paths)
