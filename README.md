@@ -15,6 +15,9 @@ Requirements
 	- sys
 	- re
 	- tqdm
+	- astropy (updated 19/05/2021)
+	- PIL (updated 19/05/2021)
+	- scipy (updated 19/05/2021)
 	- [numpy](https://numpy.org/)
 	- [pandas](https://pandas.pydata.org/)
 	- [scikit-image](https://scikit-image.org/)

@@ -8,6 +8,12 @@ from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruc
 from skimage.measure import label, regionprops_table
 import numpy as np
 
+#updated 19/05/2021
+from astropy.convolution import RickerWavelet2DKernel
+from PIL import Image
+from scipy.stats import norm
+#
+
 class SimPullAnalysis:
 
     def __init__(self, data_path):
@@ -140,7 +146,7 @@ class SimPullAnalysis:
         return 1
 
 
-    def call_Trevor(self, erode_size, bg_thres, tophat_disk_size=10, cut_margin=True, margin_size=5, progress_signal=None):
+    def call_Trevor(self, bg_thres = 1, tophat_disk_size=10, progress_signal=None, erode_size = 1):
         if progress_signal == None: #i.e. running in non-GUI mode
             workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
         else:
@@ -152,37 +158,76 @@ class SimPullAnalysis:
             saveto = os.path.join(self.path_result_raw, field)
             saveto = saveto.replace("\\", "/")
             img = io.imread(imgFile) # Read image
-
+            img = img.astype(np.float64)
             if len(img.shape) == 3: # Determine if the image is a stack file with multiple slices
                 img = np.mean(img, axis=0) # If true, average the image
             else:
                 pass # If already averaged, go on processing
 
+            img_size = np.shape(img)
+            tophat_disk_size = 50
             tophat_disk = disk(tophat_disk_size) # create tophat structural element disk, diam = tophat_disk_size (typically set to 10)
             tophat_img = white_tophat(img, tophat_disk) # Filter image with tophat
-            top_img_subbg = tophat_img 
-            top_img_subbg[tophat_img < bg_thres] = 0 # clean out array elements smaller than bg_thres, usually set to 40
-            binary_img = top_img_subbg 
-            binary_img[binary_img > 0] = 1 # binarise the image, non-positive elements will be set as 1
-            erode_disk = disk(erode_size) # create erode structural element disk, diam = erode_size (typically set to 2)
-            erode_img = erosion(top_img_subbg, erode_disk) # erode image, remove small dots (possibly noise)
-            dilate_img = dilation(erode_img, erode_disk) # dilate image, recover eroded elements
-
-            if cut_margin is True:
-                margin = np.ones(np.shape(img))
-                margin[0:margin_size, :] = 0
-                margin[-margin_size:, :] = 0
-                margin[:, 0:margin_size] = 0
-                margin[:, -margin_size:] = 0
-                mask = dilate_img*margin
-            else:
-                mask = dilate_img
-            masked_img = mask * img # return masked image
-
-            io.imsave(saveto + '.tif', masked_img) # save masked image as result
-
-            inverse_mask = 1 - mask
-            img_bgonly = inverse_mask * img
+            kernelsize = 1
+            ricker_2d_kernel = RickerWavelet2DKernel(kernelsize)
+            
+            def convolve2D(image, kernel, padding=4, strides=1):
+                
+                # Cross Correlation
+                kernel = np.flipud(np.fliplr(kernel))
+            
+                # Gather Shapes of Kernel + Image + Padding
+                xKernShape = kernel.shape[0]
+                yKernShape = kernel.shape[1]
+                xImgShape = image.shape[0]
+                yImgShape = image.shape[1]
+            
+                # Shape of Output Convolution
+                xOutput = int(((xImgShape - xKernShape + 2 * padding) / strides) + 1)
+                yOutput = int(((yImgShape - yKernShape + 2 * padding) / strides) + 1)
+                output = np.zeros((xOutput, yOutput))
+            
+                # Apply Equal Padding to All Sides
+                if padding != 0:
+                    imagePadded = np.zeros((image.shape[0] + padding*2, image.shape[1] + padding*2))
+                    imagePadded[int(padding):int(-1 * padding), int(padding):int(-1 * padding)] = image
+                    #print(imagePadded)
+                else:
+                    imagePadded = image
+            
+                # Iterate through image
+                for y in range(image.shape[1]):
+                    # Exit Convolution
+                    if y > image.shape[1] - yKernShape:
+                        break
+                    # Only Convolve if y has gone down by the specified Strides
+                    if y % strides == 0:
+                        for x in range(image.shape[0]):
+                            # Go to next row once kernel is out of bounds
+                            if x > image.shape[0] - xKernShape:
+                                break
+                            try:
+                                # Only Convolve if x has moved by the specified Strides
+                                if x % strides == 0:
+                                    output[x, y] = (kernel * imagePadded[x: x + xKernShape, y: y + yKernShape]).sum()
+                            except:
+                                break
+            
+                return output
+            output = convolve2D(tophat_img, ricker_2d_kernel, padding=0)
+            out_img = Image.fromarray(output)
+            out_resize = out_img.resize(img_size)
+            out_array = np.array(out_resize) 
+            mu,sigma = norm.fit(out_array)
+            threshold = mu + bg_thres*sigma
+            out_array[out_array<threshold] = 0
+            
+            erode_img = erosion(out_array, disk(erode_size))
+            dilate_img = dilation(erode_img, disk(erode_size))
+            dilate_img[dilate_img>0] = 1
+            mask = np.copy(dilate_img)
+            inverse_mask = 1-mask
+            img_bgonly = inverse_mask*img
             seed_img = np.copy(img_bgonly) #https://scikit-image.org/docs/dev/auto_examples/features_detection/plot_holes_and_peaks.html
             seed_img[1:-1, 1:-1] = img_bgonly.max()
             seed_mask = img_bgonly
