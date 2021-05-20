@@ -226,6 +226,9 @@ class SimPullAnalysis:
             dilate_img = dilation(erode_img, disk(erode_size))
             dilate_img[dilate_img>0] = 1
             mask = np.copy(dilate_img)
+            
+            io.imsave(saveto + '.tif', mask) # save masked image as result
+            
             inverse_mask = 1-mask
             img_bgonly = inverse_mask*img
             seed_img = np.copy(img_bgonly) #https://scikit-image.org/docs/dev/auto_examples/features_detection/plot_holes_and_peaks.html
