@@ -322,7 +322,15 @@ Please see https://github.com/ekatrukha/ComDet/wiki/How-does-detection-work%3F f
 
     def helpTrevor(self):
         self.showMessage('i', r"""                                                      Trevor
-This method is still under development. Please contact Trevor Wu (yw525@cam.ac.uk) for further information.
+Parameters:
+    Threshold: Pick out pixels with intensities over (mu + threshold*sigma). Recommended value of threshold is 1. Higher value results in fewer dots.
+    Size: Size of erosion disk. The size has to be an integer. Recommended value is 2. Higher value results in fewer dots.
+Image processing procedure:
+    1. Top-hat filtering the image.
+    2. Convolute the image with an Mexican hat filter, resulting in negative values around the aggregates.
+    3. Remove dots with intensities lower than (mu + threshold*sigma).
+    4. Erode and dilate the image to remove small noisy dots.
+    5. Label the aggregates, output area, integrated intensity values, etc.
             """)
 
 
