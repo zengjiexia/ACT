@@ -7,12 +7,9 @@ from skimage import io
 from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruction
 from skimage.measure import label, regionprops_table
 import numpy as np
-
-#updated 19/05/2021
 from astropy.convolution import RickerWavelet2DKernel
 from PIL import Image
 from scipy.stats import norm
-#
 
 class SimPullAnalysis:
 

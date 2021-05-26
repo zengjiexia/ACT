@@ -14,16 +14,17 @@ Requirements
 	- os
 	- sys
 	- re
-	- tqdm
-	- astropy (updated 19/05/2021)
-	- PIL (updated 19/05/2021)
-	- scipy (updated 19/05/2021)
+	- [tqdm - 4.60.0](https://pypi.org/project/tqdm/)
+	- [astropy - 4.0.2](https://www.astropy.org/)
+	- [PIL - 8.0.1](https://pypi.org/project/Pillow/)
+	- [scipy - 1.5.2](https://www.scipy.org/)
 	- [numpy](https://numpy.org/)
-	- [pandas](https://pandas.pydata.org/)
-	- [scikit-image](https://scikit-image.org/)
-	- [PySide 6](https://pypi.org/project/PySide6/)
-	- [pyqtgraph](https://github.com/pyqtgraph/pyqtgraph)
+	- [pandas - 0.25.3](https://pandas.pydata.org/)
+	- [scikit-image - 0.17.2](https://scikit-image.org/)
+	- [PySide 6 - 6.0.2](https://pypi.org/project/PySide6/)
+	- [pyqtgraph](https://github.com/pyqtgraph/pyqtgraph)(Included locally)
     - [pyimagej](https://github.com/imagej/pyimagej) (install with conda-forge)
+    - Openjdk - 8
 
 - [Fiji(is just imagej)](https://imagej.net/Fiji) 
 	- [ComDet](https://github.com/ekatrukha/ComDet)
