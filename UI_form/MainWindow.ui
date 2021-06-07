@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>DiffractionLimitedAnalysis</class>
- <widget class="QMainWindow" name="DiffractionLimitedAnalysis">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
   <property name="enabled">
    <bool>true</bool>
   </property>
@@ -54,7 +54,7 @@
      </sizepolicy>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="DFLSPTab">
      <attribute name="title">
@@ -429,7 +429,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="mainMenu">
