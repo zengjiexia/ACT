@@ -1,11 +1,23 @@
-DiffractionLimitedAnalysis
-===============
+UKIA - Ultimate Kit for Image Analysis
+======================================
 
-Rapid diffraction limited image analysis program.
+A platform for the rapid analysis of both diffraction-limited and single-molecule localisation images.
 
-Copyright 2021 Zengjie Xia, at the University of Cambridge
 
-DiffractionLimitedAnalysis is intended for rapid analysis of diffraction limited images, to distinguish the protein aggregates (or other targets) captured by the SimPull surface. The image processing part of this code relies on [Fiji(is just imagej)](https://imagej.net/Fiji) and [ComDet](https://github.com/ekatrukha/ComDet) - a plugin written by Eugene Katrukha at the Utrecht University.
+Applications
+------------
+- Diffraction-Limited Analysis (DFLSP)
+	
+	This program is intended for rapid analysis of diffraction-limited images, to distinguish the protein aggregates (or other targets) captured by the SiMPull surface. The analysis process can also be used for other diffraction-limited images.
+	
+	Two methods are available:
+		
+	1. ComDet - This method relies on [Fiji(is just imagej)](https://imagej.net/Fiji) and [ComDet](https://github.com/ekatrukha/ComDet) - a plugin written by Eugene Katrukha at the Utrecht University.
+		
+	2. Trevor - A pure python alternative for the ComDet. (Written by Yunzhao Wu)
+	
+	An advanced thresholding method, Orthogonal Analysis, is provided. It can help you to distinguish the actual particles detected from the backgroud noises by setting a threshold based on the 'intensity per area' distribution of the spots.
+
 
 Requirements
 ------------
@@ -29,6 +41,7 @@ Requirements
 - [Fiji(is just imagej)](https://imagej.net/Fiji) 
 	- [ComDet](https://github.com/ekatrukha/ComDet)
 
+
 Installation
 ------------
 Please install Anaconda for environment management.
@@ -37,12 +50,23 @@ cd /path-to-folder/
 setup_conda_env.bat
 ```
 
+
 Usage
 -----
-*The program only support windows system for now*
+*The program only supports Windows system for now*
 
 Command line tool:
 ```sh
 conda activate DLA_python3
 python /path_to/main.py
 ```
+
+
+Contributors
+------------
+Zengjie Xia (University of Cambridge)
+
+Yunzhao Wu (University of Cambridge)
+
+
+Copyright 2021 Zengjie Xia, at the University of Cambridge.
