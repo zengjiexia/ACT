@@ -100,9 +100,7 @@ class SimPullAnalysis:
                 selectWindow('Results');
                 saveAs("Results", \""""+saveto+"""_results.csv\");
                 close("Results");
-                selectWindow('Summary');
-                saveAs("Results", \""""+saveto+"""_summary.txt\");
-                close(\""""+field+"""_summary.txt\");
+                close("Summary");
                 selectWindow(\"AVG_"""+field+"""\");
                 saveAs("tif", \""""+saveto+""".tif\");
                 close();
@@ -115,21 +113,26 @@ class SimPullAnalysis:
                 selectWindow('Results');
                 saveAs("Results", \""""+saveto+"""_results.csv\");
                 close("Results");
-                selectWindow('Summary');
-                saveAs("Results", \""""+saveto+"""_summary.txt\");
-                close(\""""+field+"""_summary.txt\");
+                close("Summary");
                 selectWindow(\""""+field+"""\");
                 saveAs("tif", \""""+saveto+""".tif\");
                 close();
                 """
                 IJ.py.run_macro(macro)
 
+            # Remove edge particles
+            df = pd.read_csv(saveto+'_results.csv')
+            df = df.loc[(df['X_(px)'] >= 30) & (df['X_(px)'] <= 480)]
+            df = df.loc[(df['Y_(px)'] >= 30) & (df['Y_(px)'] <= 480)]
+            df = df.reset_index(drop=True)
+            df.to_csv(saveto+'_results.csv')
+
             if progress_signal == None:
                 pass
             else:
                 progress_signal.emit(c)
                 c += 1
-
+            
         if progress_signal == None:
             IJ.py.run_macro("""run("Quit")""")
         else:
