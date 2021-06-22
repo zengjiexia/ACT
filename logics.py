@@ -10,6 +10,10 @@ import numpy as np
 from astropy.convolution import RickerWavelet2DKernel
 from PIL import Image
 from scipy.stats import norm
+import multiprocessing
+from pathos.multiprocessing import ProcessingPool as Pool
+from functools import partial
+import psutil
 
 class SimPullAnalysis:
 
@@ -145,25 +149,35 @@ class SimPullAnalysis:
 
         return 1
 
-
+    
     def call_Trevor(self, bg_thres = 1, tophat_disk_size=10, progress_signal=None, erode_size = 1):
         if progress_signal == None: #i.e. running in non-GUI mode
             workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
         else:
             workload = sorted(self.fov_paths)
             c = 1 # progress indicator
-
-        for field in workload:
-            imgFile = self.fov_paths[field]
-            saveto = os.path.join(self.path_result_raw, field)
+            #progress_signal = tqdm(total=len(workload))
+            
+            
+        num_cpu = multiprocessing.cpu_count()
+        ram = psutil.virtual_memory().available
+        estimated_cores = int(np.round(ram/1024/1024/1024/2))
+        num_workers = np.minimum(num_cpu, estimated_cores)
+        
+        def process_img(img_index, fov_paths, path_result_raw, workload):
+            
+            field = workload[img_index]
+            imgFile = fov_paths[field]
+            saveto = os.path.join(path_result_raw, field)
             saveto = saveto.replace("\\", "/")
+            
             img = io.imread(imgFile) # Read image
             img = img.astype(np.float64)
             if len(img.shape) == 3: # Determine if the image is a stack file with multiple slices
                 img = np.mean(img, axis=0) # If true, average the image
             else:
                 pass # If already averaged, go on processing
-
+        
             img_size = np.shape(img)
             tophat_disk_size = 50
             tophat_disk = disk(tophat_disk_size) # create tophat structural element disk, diam = tophat_disk_size (typically set to 10)
@@ -236,17 +250,17 @@ class SimPullAnalysis:
             seed_mask = img_bgonly
             filled_img = reconstruction(seed_img, seed_mask, method='erosion')
             img_nobg = abs(img - filled_img)
-
+        
             # Label the image to index all aggregates
             labeled_img = label(mask)
             # *save image
-
+        
             intensity_list = []
             Abs_frame = []
             Channel = []
             Slice = []
             Frame = []
-
+        
             # Get the number of particles
             num_aggregates = int(np.max(labeled_img))
             # Get profiles of labeled image
@@ -265,20 +279,28 @@ class SimPullAnalysis:
                 Channel.append(1)
                 Slice.append(1)
                 Frame.append(1)
-
+        
             df['Abs_frame'] = Abs_frame
             df['Channel']= Channel
             df['Slice'] = Slice
             df['Frame'] = Frame
             df['IntegratedInt'] = intensity_list
-
             df.to_csv(saveto + '_results.csv', index=False) # save result.csv
 
-            if progress_signal == None:
-                pass
-            else:
-                progress_signal.emit(c)
-                c += 1
+        img_index = list(range(len(workload)))
+        partial_func = partial(process_img, fov_paths=self.fov_paths, path_result_raw = self.path_result_raw, workload =workload)
+        
+        pool = Pool(num_workers)
+        pool.map(partial_func, img_index)
+        pool.close()
+        pool.join()
+
+        if progress_signal == None:
+            pass
+        else:
+            pass
+            #progress_signal.emit(c)
+            #c += 1
         return 1
 
 
