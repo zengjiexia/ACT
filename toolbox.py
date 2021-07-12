@@ -57,7 +57,7 @@ class PandasModel(QAbstractTableModel):
         return None
 
 
-class ParticleFinder(QObject):
+class DFLParticleFinder(QObject):
     finished = Signal()
     progress = Signal(int)
 
@@ -88,7 +88,8 @@ class ParticleFinder(QObject):
         self.finished.emit()
 
 
-class ReportWriter(QObject):
+
+class DFLReportWriter(QObject):
     finished = Signal()
     progress = Signal(int)
 
@@ -105,3 +106,8 @@ class ReportWriter(QObject):
             print(sys.exc_info())
 
         self.finished.emit()
+
+
+
+class LipoAssayWorker(QObject):
+    

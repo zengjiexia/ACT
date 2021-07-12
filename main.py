@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
         self.window = loader.load(ui_file, self)
 
         self.path_fiji = os.path.join(os.path.dirname(__file__), 'Fiji.app')
-        self.IJ = imagej.init(self.path_fiji, headless=False)
+        #self.IJ = imagej.init(self.path_fiji, headless=False)
 
         # Menu
             # File

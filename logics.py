@@ -382,6 +382,11 @@ class LiposomeAssayAnalysis:
         else:
             self.samples = [os.path.join(self.path_data_main, sample) for sample in samples]
 
+        ### Create result directory
+        for sample in self.samples:
+            if not os.path.isdir(sample.replace(self.path_data_main, self.path_result_raw)):
+                os.mkdir((sample.replace(self.path_data_main, self.path_result_raw)))
+
     
     def run_analysis(self, threshold, progress_signal=None, log_signal=None):
 
@@ -508,11 +513,49 @@ class LiposomeAssayAnalysis:
             return intensities
 
 
+        def influx_qc(field, peaks, influx_df):
+            ### Remove error measurements ###
+            """ 
+            if 100% < influx < 110% take as 100%
+            if -10% < influx < 0% take as 0
+            if influx calculated to be nan or <-10% or >110% count as error
+            """ 
+            influx_df['Influx'] = [100 if i >= 100 and i <= 110 else i for i in influx_df['Influx']]
+            influx_df['Influx'] = [0 if i <= 0 and i >= -10 else i for i in influx_df['Influx']]
+            influx_df['Influx'] = ['error' if ms.isnan(np.float(i)) or i < -10 or i > 110 else i for i in influx_df['Influx']]
+
+            ### Generate a dataframe which contains the result of current FoV ###
+            field_result = pd.concat([
+                pd.DataFrame(np.repeat(field, len(peaks)), columns=['Field']),
+                pd.DataFrame(peaks, columns=['X', 'Y']),
+                influx_df
+                ],axis = 1)
+
+            ### Filter out error data ###
+            field_result = field_result[field_result.Influx != 'error']
+            
+            ### Get field summary ###
+            try:
+                field_error = (influx_df.Influx.values == 'error').sum()
+            except AttributeError:
+                field_error = 0
+
+            field_summary = pd.DataFrame({
+                "FoV": field,
+                "Mean influx": field_result.Influx.mean(),
+                "Total liposomes": len(peaks),
+                "Valid liposomes": len(peaks)-field_error,
+                "Invalid liposomes": field_error
+                })
+            return field_result, field_summary
+
+
         def pass_log(text):
             if log_signal == None:
                 print(text)
             else:
                 log_signal.emit(text)
+
 
         if progress_signal == None: #i.e. running in non-GUI mode
             workload = tqdm(sorted(self.samples)) # using tqdm as progress bar in cmd
@@ -521,6 +564,7 @@ class LiposomeAssayAnalysis:
             c = 1 # progress indicator
 
         for sample in workload:
+            sample_summary = pd.DataFrame()
 
             # report which sample is running to log window
             pass_log('Running sample: ' + sample)
@@ -537,9 +581,9 @@ class LiposomeAssayAnalysis:
 
             for c, field in enumerate(field_names, 1):
                 ### Average tiff files ###
-                ionomycin_mean = local_tools.average_frame(os.path.join(ionomycin_path, field))
-                sample_mean = local_tools.average_frame(os.path.join(sample_path, field))
-                blank_mean = local_tools.average_frame(os.path.join(blank_path, field))
+                ionomycin_mean = average_frame(os.path.join(ionomycin_path, field))
+                sample_mean = average_frame(os.path.join(sample_path, field))
+                blank_mean = average_frame(os.path.join(blank_path, field))
                 
                 ### Align blank and sample images to the ionomycin image ###
                 sample_aligned, blank_aligned = img_alignment(ionomycin_mean, sample_mean, blank_mean)
@@ -547,42 +591,30 @@ class LiposomeAssayAnalysis:
                 ### Locate the peaks on the ionomycin image ###
                 peaks = peak_locating(ionomycin_mean, threshold)
                 
-                ### Calculate the intensities of peaks with certain radius (in pixel) ###
-                ionomycin_intensity = intensities(ionomycin_mean, peaks, radius)
-                sample_intensity = intensities(sample_aligned, peaks, radius)
-                blank_intensity = intensities(blank_aligned, peaks, radius)
-
-                ### Calculate influx of each single liposome and count errors ###
-                influx_df = pd.DataFrame((sample_intensity - blank_intensity)/(ionomycin_intensity - blank_intensity)*100, columns=['Influx'])
-
-                ### Remove error measurements ###
-                """ 
-                if 100% < influx < 110% take as 100%
-                if -10% < influx < 0% take as 0
-                if influx calculated to be nan or <-10% or >110% count as error
-                """ 
-                influx['Influx'] = [100 if i >= 100 and i <= 110 else i for i in influx['Influx']]
-                influx['Influx'] = [0 if i <= 0 and i >= -10 else i for i in influx['Influx']]
-                influx['Influx'] = ['error' if ms.isnan(np.float(i)) or i < -10 or i > 110 else i for i in influx['Influx']]
-
-                try:
-                    field_error = (influx.Influx.values == 'error').sum()
-                except (AttributeError, FutureWarning) as e:
-                    field_error = 0
-
                 if len(peaks) == 0:
                     pass_log('Field ' + field + ' of sample ' + sample +' ignored due to no liposome located in this FoV.')
-                
-                ### Generate a dataframe which contains the result of current FoV ###
-                field_result = pd.concat([
-                    pd.DataFrame(np.repeat(field, len(peaks)), columns=['Field']),
-                    pd.DataFrame(peaks, columns=['X', 'Y']),
-                    influx              
-                    ],axis = 1)
+                    field_summary = pd.DataFrame({
+                        "FoV": field,
+                        "Mean influx": 0,
+                        "Total liposomes": 0,
+                        "Valid liposomes": 0,
+                        "Invalid liposomes": 0
+                        })
+                    sample_summary = pd.concat([sample_summary, field_summary])
+                else:
+                    ### Calculate the intensities of peaks with certain radius (in pixel) ###
+                    ionomycin_intensity = intensities(ionomycin_mean, peaks)
+                    sample_intensity = intensities(sample_aligned, peaks)
+                    blank_intensity = intensities(blank_aligned, peaks)
 
-                ### Filter out error data ###
-                field_result = field_result[field_result.Influx != 'error']
+                    ### Calculate influx of each single liposome and count errors ###
+                    influx_df = pd.DataFrame((sample_intensity - blank_intensity)/(ionomycin_intensity - blank_intensity)*100, columns=['Influx'])
 
+                    field_result, field_summary = influx_qc(field, peaks, influx_df)
+                    field_result.to_csv(os.path.join(sample.replace(self.path_data_main, self.path_result_raw), field+".csv"))
+
+                    sample_summary = pd.concat([sample_summary, field_summary])
+            sample_summary.to_csv(sample.replace(self.path_data_main, self.path_result_raw) + ".csv")
 
 
 
