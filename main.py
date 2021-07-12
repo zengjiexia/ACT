@@ -8,7 +8,7 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtGui import QIcon
 import pyqtgraph as pg
 import toolbox
-from logics import SimPullAnalysis
+from logics import SimPullAnalysis, LiposomeAssayAnalysis
 import pandas as pd
 import numpy as np
 import imagej
@@ -107,6 +107,7 @@ class MainWindow(QMainWindow):
     def loadDataPath(self):
         data_path = QFileDialog.getExistingDirectory(parent=self.window, caption='Browse path for data.', dir=os.path.dirname(__file__))
         self.window.DFLSP_pathEntry.setText(data_path)
+        self.window.LipoAssay_pathEntry.setText(data_path)
         #* set all paths
 
     # Diffraction Limited SiMPull Analysis
@@ -187,7 +188,7 @@ class MainWindow(QMainWindow):
             self.showMessage('c', self.project.error)
 
 
-    def _runAnalysis(self):
+    def _runDFLSPAnalysis(self):
         self.initialiseProgress('Locating particles...', len(self.project.fov_paths))
 
         # Create a QThread object
@@ -309,6 +310,30 @@ class MainWindow(QMainWindow):
                 self.oapopup = OrthogonalAnalysisPopup(task=t, df=t_df, xaxis=xaxisSelection, parent=self)
                 self.oapopup.window.show()
                 self.oapopup.finished.connect(self.oapopup.window.close)
+
+
+    def _checkLipoAssayParameters(self):
+        #Check if data path exists
+        data_path = self.window.LipoAssay_pathEntry.text()
+        if os.path.isdir(data_path) == False:
+            self.showMessage('w', 'Path to folder not found.')
+            return 0
+        else:
+            self.data_path = data_path
+            self.window.LipoAssay_pathEntry.setText(self.data_path)
+            self.updateLog('Data path set to '+data_path)
+
+        #Check input: threshold
+        try:
+            self.threshold = int(self.window.LipoAssay_thresholdEntry.text())
+            self.window.LipoAssay_thresholdEntry.setText(str(self.threshold))
+        except ValueError:
+            self.showMessage('c', 'Please input a number for threshold.')
+            return 0
+        if self.threshold <= 20 or self.threshold >= 160:
+            self.updateLog('Threshold set as '+str(self.threshold)+'. Suggested range would be 20-160.')
+        else:
+            self.updateLog('Threshold set at '+str(self.threshold)+'.')
 
 
     def helpComDet(self):

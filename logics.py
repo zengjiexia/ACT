@@ -1,19 +1,26 @@
 import os
 import re
+import cv2
 import pandas as pd
 from tqdm import tqdm
+import numpy as np
+import math as ms
+import tifffile as tiff
 import imagej
 from skimage import io
 from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruction
 from skimage.measure import label, regionprops_table
-import numpy as np
 from astropy.convolution import RickerWavelet2DKernel
 from PIL import Image
+from scipy import ndimage
 from scipy.stats import norm
+from scipy.ndimage import filters
+
 
 class SimPullAnalysis:
 
     def __init__(self, data_path):
+
         self.error = 1 # When this value is 1, no error was detected in the object.
         self.path_program = os.path.dirname(__file__)
         self.path_data_main = data_path
@@ -32,7 +39,9 @@ class SimPullAnalysis:
         if naming_system == 0:
             self.error = 'Invalid naming system for images. Currently supported naming systems are: XnYnRnWnCn, XnYnRnWn and Posn.'
 
+
     def gather_project_info(self):
+
         self.fov_paths = {} # dict - FoV name: path to the corresponding image
         for root, dirs, files in os.walk(self.path_data_main):
             for file in files:
@@ -346,6 +355,235 @@ class SimPullAnalysis:
         QC_data.to_csv(self.path_result_main + '/QC.csv', index=False)
         
         return 1
+
+
+
+class LiposomeAssayAnalysis:
+
+    def __init__(self, data_path):
+        self.error = 1 # When this value is 1, no error was detected in the object.
+        self.path_program = os.path.dirname(__file__)
+        self.path_data_main = data_path
+
+        # Construct dirs for results
+        self.path_result_main = data_path + '_results'
+        if os.path.isdir(self.path_result_main) != 1:
+            os.mkdir(self.path_result_main)
+        self.path_result_raw = os.path.join(self.path_result_main, 'raw')
+        if os.path.isdir(self.path_result_raw) != 1:
+            os.mkdir(self.path_result_raw)
+        self.gather_project_info()
+
+
+    def gather_project_info(self):
+        samples = [name for name in os.listdir(self.path_data_main) if not name.startswith('.') and name != 'results']
+        if 'Ionomycin' in samples:
+            self.samples = [self.path_data_main]
+        else:
+            self.samples = [os.path.join(self.path_data_main, sample) for sample in samples]
+
+    
+    def run_analysis(self, threshold, progress_signal=None, log_signal=None):
+
+        def extract_filename(path):
+            """
+            walk through a directory and put names of all tiff files into an ordered list
+            para: path - string
+            return: filenames - list of string 
+            """
+
+            filenames = []
+            for root, dirs, files in os.walk(path):
+                for name in files:
+                    if name.endswith('.tif'):
+                        filenames.append(name)
+            filenames = sorted(filenames)
+            return filenames
+
+
+        def average_frame(path):
+            """
+            input 'path' for stacked tiff file and the 'number of images' contained
+            separate individual images from a tiff stack.
+            para: path - string
+            return: ave_img - 2D array
+            """
+
+            ori_img = tiff.imread(path)
+            ave_img = np.mean(ori_img, axis=0)
+            ave_img = ave_img.astype('uint16')
+
+            return ave_img
+
+
+        def img_alignment(Ionomycin, Sample, Blank):
+            """
+            image alignment based on cross-correlation
+            Ionomycin image is the reference image
+            para: Ionomycin, Sample, Blank - 2D array
+            return: Corrected_Sample, Corrected_Blank - 2D array
+            """
+
+            centre_ = (Ionomycin.shape[0]/2, Ionomycin.shape[1]/2)
+            # 2d fourier transform of averaged images
+            FIonomycin = np.fft.fft2(Ionomycin)
+            FSample = np.fft.fft2(Sample)
+            FBlank = np.fft.fft2(Blank)
+
+            # Correlation based on Ionomycin image
+            FRIS = FIonomycin*np.conj(FSample)
+            FRIB = FIonomycin*np.conj(FBlank)
+
+            RIS = np.fft.ifft2(FRIS)
+            RIS = np.fft.fftshift(RIS)
+            RIB = np.fft.ifft2(FRIB)
+            RIB = np.fft.fftshift(RIB)
+
+            [i, j] = np.where(RIS == RIS.max())
+            [g, k] = np.where(RIB == RIB.max())
+
+            # offset values
+            IS_x_offset = i-centre_[1]
+            IS_y_offset = j-centre_[0]
+            IB_x_offset = g-centre_[1]
+            IB_y_offset = k-centre_[0]
+
+            # Correction
+            MIS = np.float64([[1, 0, IS_y_offset], [0, 1, IS_x_offset]])
+            Corrected_Sample = cv2.warpAffine(Sample, MIS, Ionomycin.shape)
+            MIB = np.float64([[1, 0, IB_y_offset], [0, 1, IB_x_offset]])
+            Corrected_Blank = cv2.warpAffine(Blank, MIB, Ionomycin.shape)
+
+            return Corrected_Sample, Corrected_Blank
+
+
+        def peak_locating(data, threshold):
+            """
+            Credit to Dr Daniel R Whiten
+            para: data - 2D array
+            para: threshold - integer
+            return: xy_thresh - 2D array [[x1, y1], [x2, y2]...]
+            """
+
+            data_max = filters.maximum_filter(data, 3)
+            maxima = (data == data_max)
+            data_min = filters.minimum_filter(data, 3)
+            diff = ((data_max - data_min) > threshold)
+            maxima[diff == 0] = 0
+
+            labeled, num_objects = ndimage.label(maxima)
+            xy = np.array(ndimage.center_of_mass(data, labeled, range(1, num_objects+1)))
+            xy_thresh = np.zeros((0, 2))
+            for row in xy:
+                a = row[0]
+                b = row[1]
+                if (a > 30) and (a < 480) and (b > 30) and (b < 480):
+                    ab = np.array([np.uint16(a), np.uint16(b)])
+                    xy_thresh = np.vstack((xy_thresh, ab))
+            xy_thresh = xy_thresh[1:] 
+
+            return xy_thresh
+
+
+        def intensities(image_array, peak_coor, radius=3):
+            """
+            When the local peak is found, extract all the coordinates of pixels in a 'radius'
+            para: image_array - 2D array
+            para: peak_coor - 2D array [[x1, y1], [x2, y2]]
+            para: radius - integer
+            return: intensities - 2D array [[I1], [I2]]
+            """
+
+            x_ind, y_ind = np.indices(image_array.shape)
+            intensities = np.zeros((0,1))
+            for (x, y) in peak_coor:
+                intensity = 0
+                circle_points = ((x_ind - x)**2 + (y_ind - y)**2) <= radius**2
+                coor = np.where(circle_points == True)
+                coor = np.array(list(zip(coor[0], coor[1])))
+                for j in coor:
+                    intensity += image_array[j[0], j[1]]
+                intensities = np.vstack((intensities, intensity))
+
+            return intensities
+
+
+        def pass_log(text):
+            if log_signal == None:
+                print(text)
+            else:
+                log_signal.emit(text)
+
+        if progress_signal == None: #i.e. running in non-GUI mode
+            workload = tqdm(sorted(self.samples)) # using tqdm as progress bar in cmd
+        else:
+            workload = sorted(self.samples)
+            c = 1 # progress indicator
+
+        for sample in workload:
+
+            # report which sample is running to log window
+            pass_log('Running sample: ' + sample)
+            
+            ionomycin_path = os.path.join(sample, 'Ionomycin')
+            sample_path = os.path.join(sample, 'Sample')
+            blank_path = os.path.join(sample, 'Blank')
+
+            if not os.path.isdir(ionomycin_path):
+                pass_log('Skip ' + sample + '. No data found in the sample folder.')
+
+            ### Obtain filenames for fields of view ###
+            field_names = extract_filename(ionomycin_path)
+
+            for c, field in enumerate(field_names, 1):
+                ### Average tiff files ###
+                ionomycin_mean = local_tools.average_frame(os.path.join(ionomycin_path, field))
+                sample_mean = local_tools.average_frame(os.path.join(sample_path, field))
+                blank_mean = local_tools.average_frame(os.path.join(blank_path, field))
+                
+                ### Align blank and sample images to the ionomycin image ###
+                sample_aligned, blank_aligned = img_alignment(ionomycin_mean, sample_mean, blank_mean)
+
+                ### Locate the peaks on the ionomycin image ###
+                peaks = peak_locating(ionomycin_mean, threshold)
+                
+                ### Calculate the intensities of peaks with certain radius (in pixel) ###
+                ionomycin_intensity = intensities(ionomycin_mean, peaks, radius)
+                sample_intensity = intensities(sample_aligned, peaks, radius)
+                blank_intensity = intensities(blank_aligned, peaks, radius)
+
+                ### Calculate influx of each single liposome and count errors ###
+                influx_df = pd.DataFrame((sample_intensity - blank_intensity)/(ionomycin_intensity - blank_intensity)*100, columns=['Influx'])
+
+                ### Remove error measurements ###
+                """ 
+                if 100% < influx < 110% take as 100%
+                if -10% < influx < 0% take as 0
+                if influx calculated to be nan or <-10% or >110% count as error
+                """ 
+                influx['Influx'] = [100 if i >= 100 and i <= 110 else i for i in influx['Influx']]
+                influx['Influx'] = [0 if i <= 0 and i >= -10 else i for i in influx['Influx']]
+                influx['Influx'] = ['error' if ms.isnan(np.float(i)) or i < -10 or i > 110 else i for i in influx['Influx']]
+
+                try:
+                    field_error = (influx.Influx.values == 'error').sum()
+                except (AttributeError, FutureWarning) as e:
+                    field_error = 0
+
+                if len(peaks) == 0:
+                    pass_log('Field ' + field + ' of sample ' + sample +' ignored due to no liposome located in this FoV.')
+                
+                ### Generate a dataframe which contains the result of current FoV ###
+                field_result = pd.concat([
+                    pd.DataFrame(np.repeat(field, len(peaks)), columns=['Field']),
+                    pd.DataFrame(peaks, columns=['X', 'Y']),
+                    influx              
+                    ],axis = 1)
+
+                ### Filter out error data ###
+                field_result = field_result[field_result.Influx != 'error']
+
+
 
 
 if __name__ == "__main__":
