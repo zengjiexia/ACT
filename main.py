@@ -49,6 +49,9 @@ class MainWindow(QMainWindow):
         self.window.actionRun_analysis_DFLSP.triggered.connect(self.clickDFLSPRun)
         self.window.actionGenerate_reports_DFLSP.triggered.connect(self.clickDFLSPGenerateReports)
         self.window.actionRead_tagged_results_DFLSP.triggered.connect(self.clickDFLSPReadTaggedResults)
+
+        self.window.actionRun_analysis_LipoAssay.triggered.connect(self.clickLipoAssayRun)
+        self.window.actionGenerate_report_LipoAssay.triggered.connect(self.clickLipoAssayGenerateReport)
             # Help
         self.window.actionComDet.triggered.connect(self.helpComDet)
         self.window.actionTrevor.triggered.connect(self.helpTrevor)
@@ -123,27 +126,27 @@ class MainWindow(QMainWindow):
         data_path = self.window.DFLSP_pathEntry.text()
         self.data_path = data_path.replace('_results', '')
         self.window.DFLSP_pathEntry.setText(self.data_path)
-        guard = self._checkParameters()
+        guard = self._checkDFLSPParameters()
         if guard == 1:
             if os.path.isdir(self.data_path + '_results') ==False:
                 self.showMessage('w', 'This dataset has not been analysed. Please run analysis.')
             else:
 
                 self.updateLog('Data path set to '+data_path)
-                self._generateReports()
+                self._generateDFLSPReports()
 
 
     def clickDFLSPReadTaggedResults(self):
         data_path = self.window.DFLSP_pathEntry.text()
         self.data_path = data_path.replace('_results', '')
         self.window.DFLSP_pathEntry.setText(self.data_path)
-        guard = self._checkParameters()
+        guard = self._checkDFLSPParameters()
         if guard == 1:
             if os.path.isdir(self.data_path + '_results') ==False:
                 self.showMessage('w', 'This dataset has not been analysed. Please run analysis.')
             else:
                 self.updateLog('Data path set to '+data_path)
-                self._showResult_main()
+                self._showDFLSPResult()
                 self.window.DFLSP_tagButton.setEnabled(True)
                 self.window.DFLSP_oaButton.setEnabled(True)
 
@@ -319,6 +322,19 @@ class MainWindow(QMainWindow):
         guard = self._checkLipoAssayParameters()
         if guard == 1:
             guard = self._runLipoAssayAnalysis()
+
+
+    def clickLipoAssayGenerateReport(self):
+        data_path = self.window.LipoAssay_pathEntry.text()
+        self.data_path = data_path.replace('_results', '')
+        self.window.LipoAssay_pathEntry.setText(self.data_path)
+        guard = self._checkLipoAssayParameters()
+        if guard == 1:
+            if os.path.isdir(self.data_path + '_results') ==False:
+                self.showMessage('w', 'This dataset has not been analysed. Please run analysis.')
+            else:
+                self.updateLog('Data path set to '+data_path)
+                self._generateLipoAssayReports()
 
 
     def _checkLipoAssayParameters(self):

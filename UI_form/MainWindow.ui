@@ -445,6 +445,7 @@
       <string>Liposome Assay</string>
      </property>
      <addaction name="actionRun_analysis_LipoAssay"/>
+     <addaction name="actionGenerate_report_LipoAssay"/>
     </widget>
     <addaction name="menuDFL_SiMPull"/>
     <addaction name="menuLiposome_Assay"/>
@@ -506,6 +507,11 @@
   <action name="actionRun_analysis_LipoAssay">
    <property name="text">
     <string>Run analysis</string>
+   </property>
+  </action>
+  <action name="actionGenerate_report_LipoAssay">
+   <property name="text">
+    <string>Generate report</string>
    </property>
   </action>
  </widget>
