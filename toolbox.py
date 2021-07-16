@@ -57,7 +57,7 @@ class PandasModel(QAbstractTableModel):
         return None
 
 
-class ParticleFinder(QObject):
+class DFLParticleFinder(QObject):
     finished = Signal()
     progress = Signal(int)
 
@@ -88,6 +88,7 @@ class ParticleFinder(QObject):
         self.finished.emit()
 
 
+
 class ReportWriter(QObject):
     finished = Signal()
     progress = Signal(int)
@@ -105,3 +106,27 @@ class ReportWriter(QObject):
             print(sys.exc_info())
 
         self.finished.emit()
+
+
+
+class LipoAssayWorker(QObject):
+    finished = Signal()
+    progress = Signal(int)
+    log = Signal(str)
+    
+    def __init__(self, project, threshold):
+        super().__init__()
+        self.project = project
+        self.threshold = threshold
+
+
+    @QtCore.Slot()
+    def run(self):
+        try:
+            self.project.run_analysis(threshold=self.threshold, progress_signal=self.progress, log_signal=self.log)
+        except:
+            print(sys.exc_info())
+
+        self.finished.emit()
+
+

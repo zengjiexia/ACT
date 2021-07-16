@@ -8,21 +8,21 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtGui import QIcon
 import pyqtgraph as pg
 import toolbox
-from logics import SimPullAnalysis
+from logics import SimPullAnalysis, LiposomeAssayAnalysis
 import pandas as pd
 import numpy as np
 import imagej
 pg.setConfigOption('background', 'w')
 
-class DiffractionLimitedAnalysis_UI(QMainWindow):
+class MainWindow(QMainWindow):
 
     def __init__(self):
-        super(DiffractionLimitedAnalysis_UI, self).__init__()
+        super(MainWindow, self).__init__()
         self.loadUI()
 
     def loadUI(self):
 
-        path = os.path.join(os.path.dirname(__file__), "UI_form/DiffractionLimitedAnalysis.ui")
+        path = os.path.join(os.path.dirname(__file__), "UI_form/MainWindow.ui")
         ui_file = QFile(path)
         if not ui_file.open(QIODevice.ReadOnly):
             print(f"Cannot open {ui_file_name}: {ui_file.errorString()}")
@@ -42,17 +42,25 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         self.path_fiji = os.path.join(os.path.dirname(__file__), 'Fiji.app')
         self.IJ = imagej.init(self.path_fiji, headless=False)
 
-        # main window widgets
-        self.window.main_runButton.clicked.connect(self.clickMainWindowRun)
-        self.window.main_tagButton.clicked.connect(self.clickMainWindowTag)
-        self.window.main_oaButton.clicked.connect(self.clickMainWindowOA)
+        # Menu
+            # File
         self.window.actionLoad.triggered.connect(self.loadDataPath)
-        self.window.actionRun_analysis.triggered.connect(self.clickMainWindowRun)
-        self.window.actionGenerate_reports.triggered.connect(self.clickGenerateReports)
-        self.window.actionRead_tagged_results.triggered.connect(self.clickReadTaggedResults)
+            # Tools
+        self.window.actionRun_analysis_DFLSP.triggered.connect(self.clickDFLSPRun)
+        self.window.actionGenerate_reports_DFLSP.triggered.connect(self.clickDFLSPGenerateReports)
+        self.window.actionRead_tagged_results_DFLSP.triggered.connect(self.clickDFLSPReadTaggedResults)
+            # Help
         self.window.actionComDet.triggered.connect(self.helpComDet)
         self.window.actionTrevor.triggered.connect(self.helpTrevor)
         self.window.actionProgram_frozen.triggered.connect(self.helpFrozen)
+
+        # DFLSP window widgets
+        self.window.DFLSP_runButton.clicked.connect(self.clickDFLSPRun)
+        self.window.DFLSP_tagButton.clicked.connect(self.clickDFLSPTag)
+        self.window.DFLSP_oaButton.clicked.connect(self.clickDFLSPOA)
+
+        # LipoAssay window widgets
+        self.window.LipoAssay_runButton.clicked.connect(self.clickLipoAssayRun)
 
         ui_file.close()
         if not self.window:
@@ -65,8 +73,7 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
     def updateLog(self, message):
         self.window.main_logBar.insertPlainText(message + '\n')
         self.window.main_logBar.verticalScrollBar().setValue(
-            self.window.main_logBar.verticalScrollBar().maximum())
-        # auto scroll down to the newest message
+            self.window.main_logBar.verticalScrollBar().maximum()) # auto scroll down to the newest message
 
 
     def initialiseProgress(self, work, workload):
@@ -101,62 +108,61 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
 
     def loadDataPath(self):
         data_path = QFileDialog.getExistingDirectory(parent=self.window, caption='Browse path for data.', dir=os.path.dirname(__file__))
-        self.window.main_pathEntry.setText(data_path)
+        self.window.DFLSP_pathEntry.setText(data_path)
+        self.window.LipoAssay_pathEntry.setText(data_path)
+        #* set all paths
+
+    # Diffraction Limited SiMPull Analysis
+    def clickDFLSPRun(self):
+        guard = self._checkDFLSPParameters()
+        if guard == 1:
+            guard = self._runDFLSPAnalysis()
 
 
-    def clickMainWindowRun(self):
+    def clickDFLSPGenerateReports(self):
+        data_path = self.window.DFLSP_pathEntry.text()
+        self.data_path = data_path.replace('_results', '')
+        self.window.DFLSP_pathEntry.setText(self.data_path)
         guard = self._checkParameters()
         if guard == 1:
-            guard = self._runAnalysis()
-        else:
-            self.showMessage('w', 'Error in parameters. Please check again.')
-
-
-    def clickGenerateReports(self):
-        data_path = self.window.main_pathEntry.text()
-        data_path = data_path.replace('_results', '')
-        guard = self._checkParameters()
-        if guard == 1:
-            if os.path.isdir(data_path + '_results') ==False:
+            if os.path.isdir(self.data_path + '_results') ==False:
                 self.showMessage('w', 'This dataset has not been analysed. Please run analysis.')
             else:
-                self.data_path = data_path
-                self.window.main_pathEntry.setText(self.data_path)
+
                 self.updateLog('Data path set to '+data_path)
                 self._generateReports()
 
 
-    def clickReadTaggedResults(self):
-        data_path = self.window.main_pathEntry.text()
-        data_path = data_path.replace('_results', '')
+    def clickDFLSPReadTaggedResults(self):
+        data_path = self.window.DFLSP_pathEntry.text()
+        self.data_path = data_path.replace('_results', '')
+        self.window.DFLSP_pathEntry.setText(self.data_path)
         guard = self._checkParameters()
         if guard == 1:
-            if os.path.isdir(data_path + '_results') ==False:
+            if os.path.isdir(self.data_path + '_results') ==False:
                 self.showMessage('w', 'This dataset has not been analysed. Please run analysis.')
             else:
-                self.data_path = data_path
-                self.window.main_pathEntry.setText(self.data_path)
                 self.updateLog('Data path set to '+data_path)
                 self._showResult_main()
-                self.window.main_tagButton.setEnabled(True)
-                self.window.main_oaButton.setEnabled(True)
+                self.window.DFLSP_tagButton.setEnabled(True)
+                self.window.DFLSP_oaButton.setEnabled(True)
 
 
-    def _checkParameters(self):
-        #Check if data path exists
-        data_path = self.window.main_pathEntry.text()
+    def _checkDFLSPParameters(self):
+        # Check if data path exists
+        data_path = self.window.DFLSP_pathEntry.text()
         if os.path.isdir(data_path) == False:
             self.showMessage('w', 'Path to folder not found.')
             return 0
         else:
             self.data_path = data_path
-            self.window.main_pathEntry.setText(self.data_path)
+            self.window.DFLSP_pathEntry.setText(self.data_path)
             self.updateLog('Data path set to '+data_path)
 
-        #Check input: threshold
+        # Check input: threshold
         try:
-            self.threshold = int(self.window.main_thresholdEntry.text())
-            self.window.main_thresholdEntry.setText(str(self.threshold))
+            self.threshold = int(self.window.DFLSP_thresholdEntry.text())
+            self.window.DFLSP_thresholdEntry.setText(str(self.threshold))
         except ValueError:
             self.showMessage('c', 'Please input a number for threshold.')
             return 0
@@ -165,10 +171,10 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         else:
             self.updateLog('Threshold set at '+str(self.threshold)+' SD.')
 
-        #Check input: estimated size
+        # Check input: estimated size
         try:
-            self.size = int(self.window.main_sizeEntry.text())
-            self.window.main_sizeEntry.setText(str(self.size))
+            self.size = int(self.window.DFLSP_sizeEntry.text())
+            self.window.DFLSP_sizeEntry.setText(str(self.size))
         except ValueError:
             self.showMessage('c', 'Please input a number for estimated particle size.')
             return 0
@@ -184,13 +190,13 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
             self.showMessage('c', self.project.error)
 
 
-    def _runAnalysis(self):
+    def _runDFLSPAnalysis(self):
         self.initialiseProgress('Locating particles...', len(self.project.fov_paths))
 
         # Create a QThread object
         self.PFThread = QThread()
         # Create a worker object
-        self.particleFinder = toolbox.ParticleFinder(self.window.main_methodSelector.currentText(), self.project, self.size, self.threshold, self.IJ)
+        self.particleFinder = toolbox.DFLParticleFinder(self.window.DFLSP_methodSelector.currentText(), self.project, self.size, self.threshold, self.IJ)
 
         # Connect signals and slots
         self.PFThread.started.connect(self.particleFinder.run)
@@ -206,9 +212,9 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         self.updateLog('Start to locate particles...')
         
         # UI response
-        self.window.main_runButton.setEnabled(False) # Block 'Run' button
+        self.window.DFLSP_runButton.setEnabled(False) # Block 'Run' button
         self.PFThread.finished.connect(
-            lambda: self.window.main_runButton.setEnabled(True) # Reset 'Run' button
+            lambda: self.window.DFLSP_runButton.setEnabled(True) # Reset 'Run' button
             )
         self.PFThread.finished.connect(
             lambda: self.updateLog('Particles in images are located.')
@@ -218,13 +224,13 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
             ) # Reset progress bar to rest
         try:
             self.PFThread.finished.connect(
-                lambda: self._generateReports()
+                lambda: self._generateDFLSPReports()
                 ) # Generate reports
         except:
             print(sys.exc_info())
 
 
-    def _generateReports(self):
+    def _generateDFLSPReports(self):
         self.initialiseProgress('Generating reports...', 3*len(self.project.wells))
 
         # Generate sample summaries, Summary.csv and QC.csv
@@ -244,12 +250,12 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
         self.reportThread.start()
         self.updateLog('Start to generate reports...')
 
-        self.window.main_runButton.setEnabled(False) # Block 'Run' button
+        self.window.DFLSP_runButton.setEnabled(False) # Block 'Run' button
         self.reportThread.finished.connect(
-            lambda: self.window.main_runButton.setEnabled(True) # Reset 'Run' button
+            lambda: self.window.DFLSP_runButton.setEnabled(True) # Reset 'Run' button
             )
         self.reportThread.finished.connect(
-            lambda: self.window.main_tagButton.setEnabled(True)
+            lambda: self.window.DFLSP_tagButton.setEnabled(True)
             )
         self.reportThread.finished.connect(
             lambda: self.updateLog('Reports generated at: ' + self.project.path_result_main)
@@ -259,34 +265,34 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
             ) # Reset progress bar to rest
         try:
             self.reportThread.finished.connect(
-                lambda: self._showResult_main()
+                lambda: self._showDFLSPResult()
                 )
         except:
             print(sys.exc_info())
 
 
-    def _showResult_main(self):
+    def _showDFLSPResult(self):
         df = pd.read_csv(self.project.path_result_main + '/Summary.csv')
         model = toolbox.PandasModel(df)
-        self.window.main_resultTable.setModel(model)
+        self.window.DFLSP_resultTable.setModel(model)
 
 
-    def clickMainWindowTag(self):
+    def clickDFLSPTag(self):
         self.tagdatapopup = TagDataPopup(parent=self)
         self.tagdatapopup.window.show()
         self.tagdatapopup.finished.connect(
-            lambda: self._showResult_main()
+            lambda: self._showDFLSPResult()
             )
         self.tagdatapopup.finished.connect(self.tagdatapopup.window.close)
         self.tagdatapopup.finished.connect(
             lambda: self.updateLog('Tagged data saved at: ' + self.project.path_result_main)
             )
         self.tagdatapopup.finished.connect(
-            lambda: self.window.main_oaButton.setEnabled(True)
+            lambda: self.window.DFLSP_oaButton.setEnabled(True)
             )
         
 
-    def clickMainWindowOA(self):
+    def clickDFLSPOA(self):
         self.groupingpopup = GroupingPopup(parent=self)
         self.groupingpopup.window.show()
         self.groupingpopup.output.connect(self._oaProcess)
@@ -308,6 +314,125 @@ class DiffractionLimitedAnalysis_UI(QMainWindow):
                 self.oapopup.finished.connect(self.oapopup.window.close)
 
 
+    # Liposome Assay Analysis
+    def clickLipoAssayRun(self):
+        guard = self._checkLipoAssayParameters()
+        if guard == 1:
+            guard = self._runLipoAssayAnalysis()
+
+
+    def _checkLipoAssayParameters(self):
+        #Check if data path exists
+        data_path = self.window.LipoAssay_pathEntry.text()
+        if os.path.isdir(data_path) == False:
+            self.showMessage('w', 'Path to folder not found.')
+            return 0
+        else:
+            self.data_path = data_path
+            self.window.LipoAssay_pathEntry.setText(self.data_path)
+            self.updateLog('Data path set to '+data_path)
+
+        #Check input: threshold
+        try:
+            self.threshold = int(self.window.LipoAssay_thresholdEntry.text())
+            self.window.LipoAssay_thresholdEntry.setText(str(self.threshold))
+        except ValueError:
+            self.showMessage('c', 'Please input a number for threshold.')
+            return 0
+        if self.threshold <= 20 or self.threshold >= 160:
+            self.updateLog('Threshold set as '+str(self.threshold)+'. Suggested range would be 20-160.')
+        else:
+            self.updateLog('Threshold set at '+str(self.threshold)+'.')
+
+        self.project = LiposomeAssayAnalysis(self.data_path) # Create project for liposome assay analysis
+        return 1
+
+
+    def _runLipoAssayAnalysis(self):
+        self.initialiseProgress('Analysing liposomes...', len(self.project.samples))
+
+        # Create a QThread object
+        self.lipoThread = QThread()
+        # Create a worker object
+        self.lipoWorker = toolbox.LipoAssayWorker(self.project, self.threshold)
+
+        # Connect signals and slots
+        self.lipoThread.started.connect(self.lipoWorker.run)
+        self.lipoWorker.finished.connect(self.lipoThread.quit)
+        self.lipoWorker.finished.connect(self.lipoWorker.deleteLater)
+        self.lipoThread.finished.connect(self.lipoThread.deleteLater)
+        # Move worker to the thread
+        self.lipoWorker.moveToThread(self.lipoThread)
+        # Connect progress signal to GUI
+        self.lipoWorker.progress.connect(self.updateProgress)
+        self.lipoWorker.log.connect(self.updateLog)
+        # Start the thread
+        self.lipoThread.start()
+        self.updateLog('Start to locate particles...')
+        
+        # UI response
+        self.window.LipoAssay_runButton.setEnabled(False) # Block 'Run' button
+        self.lipoThread.finished.connect(
+            lambda: self.window.LipoAssay_runButton.setEnabled(True) # Reset 'Run' button
+            )
+        self.lipoThread.finished.connect(
+            lambda: self.updateLog('Liposome analysis finished.')
+            )
+        self.lipoThread.finished.connect(
+            lambda: self.restProgress()
+            ) # Reset progress bar to rest
+        try:
+            self.lipoThread.finished.connect(
+                lambda: self._generateLipoAssayReports()
+                ) # Generate reports
+        except:
+            print(sys.exc_info())
+
+
+    def _generateLipoAssayReports(self):
+        self.initialiseProgress('Generating reports...', len(self.project.samples))
+
+        # Generate Summary.csv
+        self.reportThread = QThread()
+        self.reportWriter = toolbox.ReportWriter(self.project)
+
+        self.reportThread.started.connect(self.reportWriter.run)
+        self.reportWriter.finished.connect(self.reportThread.quit)
+        self.reportWriter.finished.connect(self.reportWriter.deleteLater)
+        self.reportThread.finished.connect(self.reportThread.deleteLater)
+
+        self.reportWriter.moveToThread(self.reportThread)
+
+        self.reportWriter.progress.connect(self.updateProgress)
+
+        self.reportThread.start()
+        self.updateLog('Start to generate reports...')
+
+        self.window.LipoAssay_runButton.setEnabled(False) # Block 'Run' button
+        self.reportThread.finished.connect(
+            lambda: self.window.LipoAssay_runButton.setEnabled(True) # Reset 'Run' button
+            )
+        self.reportThread.finished.connect(
+            lambda: self.updateLog('Reports generated at: ' + self.project.path_result_main)
+            )
+        self.reportThread.finished.connect(
+            lambda: self.restProgress()
+            ) # Reset progress bar to rest
+        try:
+            self.reportThread.finished.connect(
+                lambda: self._showLipoAssayResult()
+                )
+        except:
+            print(sys.exc_info())
+
+
+    def _showLipoAssayResult(self):
+        df = pd.read_csv(self.project.path_result_main + '/Summary.csv')
+        model = toolbox.PandasModel(df)
+        self.window.LipoAssay_resultTable.setModel(model)
+
+
+    # Help informations
     def helpComDet(self):
         self.showMessage('i', r"""                                                      ComDet
 Parameters:
@@ -323,12 +448,12 @@ Please see https://github.com/ekatrukha/ComDet/wiki/How-does-detection-work%3F f
     def helpTrevor(self):
         self.showMessage('i', r"""                                                      Trevor
 Parameters:
-    Threshold: Pick out pixels with intensities over (mu + threshold*sigma). Recommended value of threshold is 1. Higher value results in fewer dots.
+    Threshold: Pick out pixels with intensities over (μ+threshold*σ). Recommended value of threshold is 1. Higher value results in fewer dots.
     Size: Size of erosion disk. The size has to be an integer. Recommended value is 2. Higher value results in fewer dots.
 Image processing procedure:
     1. Top-hat filtering the image.
     2. Convolute the image with an Mexican hat filter, resulting in negative values around the aggregates.
-    3. Remove dots with intensities lower than (mu + threshold*sigma).
+    3. Remove dots with intensities lower than (μ+threshold*σ).
     4. Erode and dilate the image to remove small noisy dots.
     5. Label the aggregates, output area, integrated intensity values, etc.
             """)
@@ -341,6 +466,7 @@ Please contact Ron Xia (zx252@cam.ac.uk) if you keep having this problem. This i
             """)
 
 
+# Supporting widgets
 class TagDataPopup(QWidget):
     finished = Signal()
     def __init__(self, parent=None):
@@ -633,6 +759,6 @@ if __name__ == "__main__":
 
     app = QApplication([])
     app.setWindowIcon(QIcon(os.path.join(os.path.dirname(__file__), "UI_form/lulu.ico")))
-    main_window = DiffractionLimitedAnalysis_UI()
+    main_window = MainWindow()
     main_window.show()
     sys.exit(app.exec_())
