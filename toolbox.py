@@ -89,7 +89,7 @@ class DFLParticleFinder(QObject):
 
 
 
-class DFLReportWriter(QObject):
+class ReportWriter(QObject):
     finished = Signal()
     progress = Signal(int)
 
@@ -110,4 +110,23 @@ class DFLReportWriter(QObject):
 
 
 class LipoAssayWorker(QObject):
+    finished = Signal()
+    progress = Signal(int)
+    log = Signal(str)
     
+    def __init__(self, project, threshold):
+        super().__init__()
+        self.project = project
+        self.threshold = threshold
+
+
+    @QtCore.Slot()
+    def run(self):
+        try:
+            self.project.run_analysis(threshold=self.threshold, progress_signal=self.progress, log_signal=self.log)
+        except:
+            print(sys.exc_info())
+
+        self.finished.emit()
+
+

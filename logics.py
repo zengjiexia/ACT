@@ -86,7 +86,7 @@ class SimPullAnalysis:
             workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
         else:
             workload = sorted(self.fov_paths)
-            c = 1 # progress indicator
+            c = 0 # progress indicator
 
         #Check if the images are stack, and choose correct macro
         test_img = io.imread(list(self.fov_paths.values())[0])
@@ -136,8 +136,8 @@ class SimPullAnalysis:
             if progress_signal == None:
                 pass
             else:
-                progress_signal.emit(c)
                 c += 1
+                progress_signal.emit(c) 
 
         if progress_signal == None:
             IJ.py.run_macro("""run("Quit")""")
@@ -157,7 +157,7 @@ class SimPullAnalysis:
             workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
         else:
             workload = sorted(self.fov_paths)
-            c = 1 # progress indicator
+            c = 0 # progress indicator
 
         for field in workload:
             imgFile = self.fov_paths[field]
@@ -283,8 +283,9 @@ class SimPullAnalysis:
             if progress_signal == None:
                 pass
             else:
-                progress_signal.emit(c)
                 c += 1
+                progress_signal.emit(c)
+                
         return 1
 
 
@@ -293,7 +294,7 @@ class SimPullAnalysis:
             workload = tqdm(sorted(self.wells)) # using tqdm as progress bar in cmd
         else:
             workload = sorted(self.wells)
-            c = 1 # progress indicator
+            c = 0 # progress indicator
         # Generate sample reports
         for well in workload:
             well_result = pd.DataFrame()
@@ -310,9 +311,9 @@ class SimPullAnalysis:
             if progress_signal == None:
                 pass
             else:
-                progress_signal.emit(c)
                 c += 1
-
+                progress_signal.emit(c)
+                
         # Generate summary report
         summary_report = pd.DataFrame()
         for well in workload:
@@ -332,8 +333,9 @@ class SimPullAnalysis:
             if progress_signal == None:
                 pass
             else:
-                progress_signal.emit(c)
                 c += 1
+                progress_signal.emit(c)
+
         summary_report.to_csv(self.path_result_main + '/Summary.csv', index=False)
 
         # Generate quality control report
@@ -349,8 +351,9 @@ class SimPullAnalysis:
             if progress_signal == None:
                 pass
             else:
-                progress_signal.emit(c)
                 c += 1
+                progress_signal.emit(c)
+                
         QC_data = QC_data.reset_index(drop=True)
         QC_data.to_csv(self.path_result_main + '/QC.csv', index=False)
         
@@ -536,16 +539,16 @@ class LiposomeAssayAnalysis:
             
             ### Get field summary ###
             try:
-                field_error = (influx_df.Influx.values == 'error').sum()
-            except AttributeError:
+                field_error = (influx_df.Influx == 'error').sum()
+            except (AttributeError, FutureWarning) as e:
                 field_error = 0
 
             field_summary = pd.DataFrame({
-                "FoV": field,
-                "Mean influx": field_result.Influx.mean(),
-                "Total liposomes": len(peaks),
-                "Valid liposomes": len(peaks)-field_error,
-                "Invalid liposomes": field_error
+                "FoV": [field],
+                "Mean influx": [field_result.Influx.mean()],
+                "Total liposomes": [len(peaks)],
+                "Valid liposomes": [len(peaks)-field_error],
+                "Invalid liposomes": [field_error]
                 })
             return field_result, field_summary
 
@@ -561,7 +564,7 @@ class LiposomeAssayAnalysis:
             workload = tqdm(sorted(self.samples)) # using tqdm as progress bar in cmd
         else:
             workload = sorted(self.samples)
-            c = 1 # progress indicator
+            c = 0 # progress indicator
 
         for sample in workload:
             sample_summary = pd.DataFrame()
@@ -579,7 +582,7 @@ class LiposomeAssayAnalysis:
             ### Obtain filenames for fields of view ###
             field_names = extract_filename(ionomycin_path)
 
-            for c, field in enumerate(field_names, 1):
+            for field in field_names:
                 ### Average tiff files ###
                 ionomycin_mean = average_frame(os.path.join(ionomycin_path, field))
                 sample_mean = average_frame(os.path.join(sample_path, field))
@@ -594,11 +597,11 @@ class LiposomeAssayAnalysis:
                 if len(peaks) == 0:
                     pass_log('Field ' + field + ' of sample ' + sample +' ignored due to no liposome located in this FoV.')
                     field_summary = pd.DataFrame({
-                        "FoV": field,
-                        "Mean influx": 0,
-                        "Total liposomes": 0,
-                        "Valid liposomes": 0,
-                        "Invalid liposomes": 0
+                        "FoV": [field],
+                        "Mean influx": [0],
+                        "Total liposomes": [0],
+                        "Valid liposomes": [0],
+                        "Invalid liposomes": [0]
                         })
                     sample_summary = pd.concat([sample_summary, field_summary])
                 else:
@@ -614,8 +617,47 @@ class LiposomeAssayAnalysis:
                     field_result.to_csv(os.path.join(sample.replace(self.path_data_main, self.path_result_raw), field+".csv"))
 
                     sample_summary = pd.concat([sample_summary, field_summary])
+
+            # Report progress
+            if progress_signal != None:
+                c += 1
+                progress_signal.emit(c)
+
             sample_summary.to_csv(sample.replace(self.path_data_main, self.path_result_raw) + ".csv")
 
+
+    def generate_reports(self, progress_signal=None):
+        workload = [f for f in os.listdir(self.path_result_raw) if os.path.isfile(os.path.join(self.path_result_raw, f))]
+        if progress_signal == None: #i.e. running in non-GUI mode
+            workload = tqdm(sorted(workload)) # using tqdm as progress bar in cmd
+        else:
+            workload = sorted(workload)
+            c = 0 # progress indicator
+
+        summary_df = pd.DataFrame()
+        for file in workload:
+            file_path = os.path.join(self.path_result_raw, file)
+            df = pd.read_csv(file_path)
+            df['Well'] = df['FoV'].str.findall(r"X\dY\d")
+            df['Well'] = df['Well'].str.get(0)
+            df = df.groupby('Well').agg({'Mean influx': 'mean',
+                                        'Total liposomes': 'sum',
+                                        'Valid liposomes': 'sum',
+                                        'Invalid liposomes': 'sum'})
+            df = df.reset_index(drop=False)
+            df['Sample'] = file[:-4]
+            summary_df = pd.concat([summary_df, df])
+
+            if progress_signal != None:
+                c += 1
+                progress_signal.emit(c)
+
+        cols = summary_df.columns.tolist()
+        cols = cols[-1:] + cols[:-1]
+        summary_df = summary_df[cols]
+        summary_df.to_csv(self.path_result_main + '/Summary.csv', index=False)
+        
+        return 1
 
 
 if __name__ == "__main__":

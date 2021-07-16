@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
         self.window = loader.load(ui_file, self)
 
         self.path_fiji = os.path.join(os.path.dirname(__file__), 'Fiji.app')
-        #self.IJ = imagej.init(self.path_fiji, headless=False)
+        self.IJ = imagej.init(self.path_fiji, headless=False)
 
         # Menu
             # File
@@ -59,6 +59,8 @@ class MainWindow(QMainWindow):
         self.window.DFLSP_tagButton.clicked.connect(self.clickDFLSPTag)
         self.window.DFLSP_oaButton.clicked.connect(self.clickDFLSPOA)
 
+        # LipoAssay window widgets
+        self.window.LipoAssay_runButton.clicked.connect(self.clickLipoAssayRun)
 
         ui_file.close()
         if not self.window:
@@ -147,7 +149,7 @@ class MainWindow(QMainWindow):
 
 
     def _checkDFLSPParameters(self):
-        #Check if data path exists
+        # Check if data path exists
         data_path = self.window.DFLSP_pathEntry.text()
         if os.path.isdir(data_path) == False:
             self.showMessage('w', 'Path to folder not found.')
@@ -157,7 +159,7 @@ class MainWindow(QMainWindow):
             self.window.DFLSP_pathEntry.setText(self.data_path)
             self.updateLog('Data path set to '+data_path)
 
-        #Check input: threshold
+        # Check input: threshold
         try:
             self.threshold = int(self.window.DFLSP_thresholdEntry.text())
             self.window.DFLSP_thresholdEntry.setText(str(self.threshold))
@@ -169,7 +171,7 @@ class MainWindow(QMainWindow):
         else:
             self.updateLog('Threshold set at '+str(self.threshold)+' SD.')
 
-        #Check input: estimated size
+        # Check input: estimated size
         try:
             self.size = int(self.window.DFLSP_sizeEntry.text())
             self.window.DFLSP_sizeEntry.setText(str(self.size))
@@ -194,7 +196,7 @@ class MainWindow(QMainWindow):
         # Create a QThread object
         self.PFThread = QThread()
         # Create a worker object
-        self.particleFinder = toolbox.ParticleFinder(self.window.DFLSP_methodSelector.currentText(), self.project, self.size, self.threshold, self.IJ)
+        self.particleFinder = toolbox.DFLParticleFinder(self.window.DFLSP_methodSelector.currentText(), self.project, self.size, self.threshold, self.IJ)
 
         # Connect signals and slots
         self.PFThread.started.connect(self.particleFinder.run)
@@ -312,6 +314,13 @@ class MainWindow(QMainWindow):
                 self.oapopup.finished.connect(self.oapopup.window.close)
 
 
+    # Liposome Assay Analysis
+    def clickLipoAssayRun(self):
+        guard = self._checkLipoAssayParameters()
+        if guard == 1:
+            guard = self._runLipoAssayAnalysis()
+
+
     def _checkLipoAssayParameters(self):
         #Check if data path exists
         data_path = self.window.LipoAssay_pathEntry.text()
@@ -335,7 +344,95 @@ class MainWindow(QMainWindow):
         else:
             self.updateLog('Threshold set at '+str(self.threshold)+'.')
 
+        self.project = LiposomeAssayAnalysis(self.data_path) # Create project for liposome assay analysis
+        return 1
 
+
+    def _runLipoAssayAnalysis(self):
+        self.initialiseProgress('Analysing liposomes...', len(self.project.samples))
+
+        # Create a QThread object
+        self.lipoThread = QThread()
+        # Create a worker object
+        self.lipoWorker = toolbox.LipoAssayWorker(self.project, self.threshold)
+
+        # Connect signals and slots
+        self.lipoThread.started.connect(self.lipoWorker.run)
+        self.lipoWorker.finished.connect(self.lipoThread.quit)
+        self.lipoWorker.finished.connect(self.lipoWorker.deleteLater)
+        self.lipoThread.finished.connect(self.lipoThread.deleteLater)
+        # Move worker to the thread
+        self.lipoWorker.moveToThread(self.lipoThread)
+        # Connect progress signal to GUI
+        self.lipoWorker.progress.connect(self.updateProgress)
+        self.lipoWorker.log.connect(self.updateLog)
+        # Start the thread
+        self.lipoThread.start()
+        self.updateLog('Start to locate particles...')
+        
+        # UI response
+        self.window.LipoAssay_runButton.setEnabled(False) # Block 'Run' button
+        self.lipoThread.finished.connect(
+            lambda: self.window.LipoAssay_runButton.setEnabled(True) # Reset 'Run' button
+            )
+        self.lipoThread.finished.connect(
+            lambda: self.updateLog('Liposome analysis finished.')
+            )
+        self.lipoThread.finished.connect(
+            lambda: self.restProgress()
+            ) # Reset progress bar to rest
+        try:
+            self.lipoThread.finished.connect(
+                lambda: self._generateLipoAssayReports()
+                ) # Generate reports
+        except:
+            print(sys.exc_info())
+
+
+    def _generateLipoAssayReports(self):
+        self.initialiseProgress('Generating reports...', len(self.project.samples))
+
+        # Generate Summary.csv
+        self.reportThread = QThread()
+        self.reportWriter = toolbox.ReportWriter(self.project)
+
+        self.reportThread.started.connect(self.reportWriter.run)
+        self.reportWriter.finished.connect(self.reportThread.quit)
+        self.reportWriter.finished.connect(self.reportWriter.deleteLater)
+        self.reportThread.finished.connect(self.reportThread.deleteLater)
+
+        self.reportWriter.moveToThread(self.reportThread)
+
+        self.reportWriter.progress.connect(self.updateProgress)
+
+        self.reportThread.start()
+        self.updateLog('Start to generate reports...')
+
+        self.window.LipoAssay_runButton.setEnabled(False) # Block 'Run' button
+        self.reportThread.finished.connect(
+            lambda: self.window.LipoAssay_runButton.setEnabled(True) # Reset 'Run' button
+            )
+        self.reportThread.finished.connect(
+            lambda: self.updateLog('Reports generated at: ' + self.project.path_result_main)
+            )
+        self.reportThread.finished.connect(
+            lambda: self.restProgress()
+            ) # Reset progress bar to rest
+        try:
+            self.reportThread.finished.connect(
+                lambda: self._showLipoAssayResult()
+                )
+        except:
+            print(sys.exc_info())
+
+
+    def _showLipoAssayResult(self):
+        df = pd.read_csv(self.project.path_result_main + '/Summary.csv')
+        model = toolbox.PandasModel(df)
+        self.window.LipoAssay_resultTable.setModel(model)
+
+
+    # Help informations
     def helpComDet(self):
         self.showMessage('i', r"""                                                      ComDet
 Parameters:
@@ -369,7 +466,7 @@ Please contact Ron Xia (zx252@cam.ac.uk) if you keep having this problem. This i
             """)
 
 
-
+# Supporting widgets
 class TagDataPopup(QWidget):
     finished = Signal()
     def __init__(self, parent=None):
