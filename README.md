@@ -19,6 +19,11 @@ Applications
 	An advanced thresholding method, Orthogonal Analysis, is provided. It can help you to distinguish the actual particles detected from the backgroud noises by setting a threshold based on the 'intensity per area' distribution of the spots.
 
 
+- Liposome Assay Analysis
+
+	The workflow is the improved version of [Calcium Influx Assay](https://github.com/zengjiexia/CalciumInfluxAssay). It is an automated analysis program for [Ultrasensitive Measurement of Ca2+ Influx into Lipid Vesicles Induced by Protein Aggregates](https://doi.org/10.1002/anie.201700966) developed in the Klenerman Group. 
+	
+
 Requirements
 ------------
 
@@ -38,6 +43,8 @@ Requirements
 	- [scikit-image - 0.17.2](https://scikit-image.org/)
 	- [PySide 6 - 6.0.2](https://pypi.org/project/PySide6/)
 	- [pyqtgraph](https://github.com/pyqtgraph/pyqtgraph)(Included locally)
+	- [pathos](https://pypi.org/project/pathos/)
+	- [psutil](https://pypi.org/project/psutil/)
     - [pyimagej](https://github.com/imagej/pyimagej) (install with conda-forge)
     - Openjdk - 8
 
