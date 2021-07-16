@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>DiffractionLimitedAnalysis</class>
- <widget class="QMainWindow" name="DiffractionLimitedAnalysis">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
   <property name="enabled">
    <bool>true</bool>
   </property>
@@ -32,7 +32,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Diffraction Limited Analysis</string>
+   <string>UKIA - Ultimate Kit for Image Analysis</string>
   </property>
   <widget class="QWidget" name="mainWidget">
    <widget class="QTabWidget" name="tabWidget">
@@ -56,11 +56,11 @@
     <property name="currentIndex">
      <number>0</number>
     </property>
-    <widget class="QWidget" name="mainTab">
+    <widget class="QWidget" name="DFLSPTab">
      <attribute name="title">
       <string>DFL SiMPull</string>
      </attribute>
-     <widget class="QGroupBox" name="main_runBox">
+     <widget class="QGroupBox" name="DFLSP_runBox">
       <property name="geometry">
        <rect>
         <x>6</x>
@@ -86,42 +86,42 @@
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
        <item row="0" column="0">
-        <widget class="QLabel" name="main_pathLabel">
+        <widget class="QLabel" name="DFLSP_pathLabel">
          <property name="text">
           <string>Path</string>
          </property>
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QLabel" name="main_thresholdLabel">
+        <widget class="QLabel" name="DFLSP_thresholdLabel">
          <property name="text">
-          <string>Threshold (SD)</string>
+          <string>Threshold</string>
          </property>
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QLineEdit" name="main_thresholdEntry">
+        <widget class="QLineEdit" name="DFLSP_thresholdEntry">
          <property name="text">
           <string>3</string>
          </property>
         </widget>
        </item>
        <item row="1" column="2">
-        <widget class="QLabel" name="main_sizeLabel">
+        <widget class="QLabel" name="DFLSP_sizeLabel">
          <property name="text">
-          <string>Size (pixels)</string>
+          <string>Estimated size</string>
          </property>
         </widget>
        </item>
        <item row="1" column="4">
-        <widget class="QLineEdit" name="main_sizeEntry">
+        <widget class="QLineEdit" name="DFLSP_sizeEntry">
          <property name="text">
           <string>5</string>
          </property>
         </widget>
        </item>
        <item row="2" column="4">
-        <widget class="QPushButton" name="main_runButton">
+        <widget class="QPushButton" name="DFLSP_runButton">
          <property name="text">
           <string>Run</string>
          </property>
@@ -134,14 +134,14 @@
         </widget>
        </item>
        <item row="0" column="1" colspan="3">
-        <widget class="QLineEdit" name="main_pathEntry">
+        <widget class="QLineEdit" name="DFLSP_pathEntry">
          <property name="text">
           <string>D:\Work\DLA_test\samples</string>
          </property>
         </widget>
        </item>
        <item row="0" column="4">
-        <widget class="QComboBox" name="main_methodSelector">
+        <widget class="QComboBox" name="DFLSP_methodSelector">
          <item>
           <property name="text">
            <string>ComDet</string>
@@ -156,7 +156,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QGroupBox" name="main_resultBox">
+     <widget class="QGroupBox" name="DFLSP_resultBox">
       <property name="geometry">
        <rect>
         <x>6</x>
@@ -176,7 +176,7 @@
       </property>
       <layout class="QGridLayout" name="gridLayout_3">
        <item row="2" column="0">
-        <widget class="QPushButton" name="main_tagButton">
+        <widget class="QPushButton" name="DFLSP_tagButton">
          <property name="enabled">
           <bool>false</bool>
          </property>
@@ -186,7 +186,7 @@
         </widget>
        </item>
        <item row="2" column="1">
-        <widget class="QPushButton" name="main_oaButton">
+        <widget class="QPushButton" name="DFLSP_oaButton">
          <property name="enabled">
           <bool>false</bool>
          </property>
@@ -196,7 +196,132 @@
         </widget>
        </item>
        <item row="0" column="0" colspan="2">
-        <widget class="QTableView" name="main_resultTable">
+        <widget class="QTableView" name="DFLSP_resultTable">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="mouseTracking">
+          <bool>false</bool>
+         </property>
+         <property name="contextMenuPolicy">
+          <enum>Qt::DefaultContextMenu</enum>
+         </property>
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
+         </property>
+         <property name="dragEnabled">
+          <bool>false</bool>
+         </property>
+         <property name="defaultDropAction">
+          <enum>Qt::IgnoreAction</enum>
+         </property>
+         <property name="selectionMode">
+          <enum>QAbstractItemView::ExtendedSelection</enum>
+         </property>
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectItems</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="LipoAssayTab">
+     <attribute name="title">
+      <string>Liposome Assay</string>
+     </attribute>
+     <widget class="QGroupBox" name="LipoAssay_runBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>761</width>
+        <height>131</height>
+       </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>230</height>
+       </size>
+      </property>
+      <property name="title">
+       <string>Current run</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="0" column="0">
+        <widget class="QLabel" name="LipoAssay_pathLabel">
+         <property name="text">
+          <string>Path</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1" colspan="2">
+        <widget class="QLineEdit" name="LipoAssay_pathEntry">
+         <property name="text">
+          <string>D:\Work\Lipo_test\samples</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="LipoAssay_thresholdLabel">
+         <property name="text">
+          <string>Threshold</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="LipoAssay_thresholdEntry">
+         <property name="text">
+          <string>80</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QPushButton" name="LipoAssay_runButton">
+         <property name="text">
+          <string>Run</string>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+         <property name="default">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QGroupBox" name="LipoAssay_resultBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>140</y>
+        <width>761</width>
+        <height>271</height>
+       </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="title">
+       <string>Current results</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_5">
+       <item row="0" column="0" colspan="2">
+        <widget class="QTableView" name="LipoAssay_resultTable">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -307,9 +432,22 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionRun_analysis"/>
-    <addaction name="actionGenerate_reports"/>
-    <addaction name="actionRead_tagged_results"/>
+    <widget class="QMenu" name="menuDFL_SiMPull">
+     <property name="title">
+      <string>DFL SiMPull</string>
+     </property>
+     <addaction name="actionRun_analysis_DFLSP"/>
+     <addaction name="actionGenerate_reports_DFLSP"/>
+     <addaction name="actionRead_tagged_results_DFLSP"/>
+    </widget>
+    <widget class="QMenu" name="menuLiposome_Assay">
+     <property name="title">
+      <string>Liposome Assay</string>
+     </property>
+     <addaction name="actionRun_analysis_LipoAssay"/>
+    </widget>
+    <addaction name="menuDFL_SiMPull"/>
+    <addaction name="menuLiposome_Assay"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -321,6 +459,7 @@
      </property>
      <addaction name="actionComDet"/>
      <addaction name="actionTrevor"/>
+     <addaction name="separator"/>
     </widget>
     <addaction name="menuMethod_instruction"/>
     <addaction name="actionProgram_frozen"/>
@@ -332,16 +471,6 @@
   <action name="actionLoad">
    <property name="text">
     <string>Load...</string>
-   </property>
-  </action>
-  <action name="actionGenerate_reports">
-   <property name="text">
-    <string>Generate reports</string>
-   </property>
-  </action>
-  <action name="actionRead_tagged_results">
-   <property name="text">
-    <string>Read tagged results</string>
    </property>
   </action>
   <action name="actionComDet">
@@ -359,7 +488,22 @@
     <string>Program frozen</string>
    </property>
   </action>
-  <action name="actionRun_analysis">
+  <action name="actionRun_analysis_DFLSP">
+   <property name="text">
+    <string>Run analysis</string>
+   </property>
+  </action>
+  <action name="actionGenerate_reports_DFLSP">
+   <property name="text">
+    <string>Generate reports</string>
+   </property>
+  </action>
+  <action name="actionRead_tagged_results_DFLSP">
+   <property name="text">
+    <string>Read tagged results</string>
+   </property>
+  </action>
+  <action name="actionRun_analysis_LipoAssay">
    <property name="text">
     <string>Run analysis</string>
    </property>
