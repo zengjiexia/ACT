@@ -46,8 +46,8 @@
   <widget class="QPushButton" name="oa_applyButton">
    <property name="geometry">
     <rect>
-     <x>190</x>
-     <y>270</y>
+     <x>30</x>
+     <y>350</y>
      <width>140</width>
      <height>30</height>
     </rect>
@@ -60,7 +60,7 @@
    <property name="geometry">
     <rect>
      <x>190</x>
-     <y>310</y>
+     <y>350</y>
      <width>140</width>
      <height>30</height>
     </rect>
@@ -72,8 +72,8 @@
   <widget class="QPushButton" name="oa_saveResultButton">
    <property name="geometry">
     <rect>
-     <x>190</x>
-     <y>350</y>
+     <x>30</x>
+     <y>390</y>
      <width>140</width>
      <height>30</height>
     </rect>
@@ -94,6 +94,26 @@
    <property name="text">
     <string>Cancel</string>
    </property>
+  </widget>
+  <widget class="QComboBox" name="oa_plotSelector">
+   <property name="geometry">
+    <rect>
+     <x>220</x>
+     <y>270</y>
+     <width>101</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <item>
+    <property name="text">
+     <string>Line plot</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>Bar plot</string>
+    </property>
+   </item>
   </widget>
  </widget>
  <customwidgets>

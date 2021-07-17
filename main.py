@@ -657,6 +657,7 @@ class OrthogonalAnalysisPopup(QWidget):
         self.window.oa_defaultButton.clicked.connect(self.resetDefault)
         self.window.oa_saveResultButton.clicked.connect(self.saveData)
         self.window.oa_cancelButton.clicked.connect(self.cancel)
+        self.window.oa_plotSelector.currentIndexChanged.connect(self.applyThresholds)
 
         self._updateParticlePlot(self.org_df)
         self._plotIntnArea()
@@ -688,7 +689,12 @@ class OrthogonalAnalysisPopup(QWidget):
         self.window.oa_particlePlot.setLabel('left', 'Particle per FoV')
         self.window.oa_particlePlot.setLabel('bottom', self.xaxis)
         self.window.oa_particlePlot.setRange(xRange=[0, np.max(list(self.xdict.keys()))])
-        self.window.oa_particlePlot.plot(x=list(self.xdict.keys()), y=sum_df.ParticlePerFoV, pen=(0,0,0,255))
+
+        if self.window.oa_plotSelector.currentText() == "Bar plot":
+            bargraph = pg.BarGraphItem(x=list(self.xdict.keys()), height=sum_df.ParticlePerFoV, width=0.6)
+            self.window.oa_particlePlot.addItem(bargraph)
+        else:
+            self.window.oa_particlePlot.plot(x=list(self.xdict.keys()), y=sum_df.ParticlePerFoV, pen=(0,0,0,255))
 
 
     def _plotIntnArea(self):
