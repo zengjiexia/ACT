@@ -235,10 +235,14 @@ class SimPullAnalysis:
                                 break
             
                 return output
+
+            pad = np.zeros([img_size[0]+8, img_size[1]+8])
+            pad[4:img_size[0]+4, 4:img_size[1]+4] = tophat_img
+            pad_img = np.copy(pad)
             output = convolve2D(tophat_img, ricker_2d_kernel, padding=0)
             out_img = Image.fromarray(output)
             out_resize = out_img.resize(img_size)
-            out_array = np.array(out_resize) 
+            out_array = np.array(out_resize)
             mu,sigma = norm.fit(out_array)
             threshold = mu + bg_thres*sigma
             out_array[out_array<threshold] = 0
@@ -247,7 +251,10 @@ class SimPullAnalysis:
             dilate_img = dilation(erode_img, disk(erode_size))
             dilate_img[dilate_img>0] = 1
             mask = np.copy(dilate_img)
-            
+            mask[0:5, :] = 0
+            mask[-5:, :] = 0
+            mask[:, 0:5] = 0
+            mask[:, -5:] = 0
             io.imsave(saveto + '.tif', mask) # save masked image as result
             
             inverse_mask = 1-mask
