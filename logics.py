@@ -682,6 +682,15 @@ class LiposomeAssayAnalysis:
         return 1
 
 
+
+class SuperResAnalysis:
+    
+    def __init__(self, data_path):
+        pass
+
+
+
+
 if __name__ == "__main__":
 
     path = input('Please input the path for analysis:\n')

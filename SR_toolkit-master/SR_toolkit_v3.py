@@ -14,7 +14,7 @@ def mainfunc():
     
     '''
        
-    directory = r"C:\Users\Eric\Documents\SR_toolkit_reboot\561"
+    directory = r"D:\Work\Supres_test"
     image_condition = lambda img: img.endswith('.tif')
     input_dict = {
     # ==== Parameters for all analysis ====
