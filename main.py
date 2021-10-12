@@ -8,7 +8,7 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtGui import QIcon
 import pyqtgraph as pg
 import toolbox
-from logics import SimPullAnalysis, LiposomeAssayAnalysis
+from logics import SimPullAnalysis, LiposomeAssayAnalysis, SuperResAnalysis
 import pandas as pd
 import numpy as np
 import imagej
@@ -64,6 +64,9 @@ class MainWindow(QMainWindow):
 
         # LipoAssay window widgets
         self.window.LipoAssay_runButton.clicked.connect(self.clickLipoAssayRun)
+
+        # SR window widgets
+        self.window.SupRes_runAnalysisButton.clicked.connect(self.clickSRRun)
 
         ui_file.close()
         if not self.window:
@@ -448,7 +451,93 @@ class MainWindow(QMainWindow):
         self.window.LipoAssay_resultTable.setModel(model)
 
 
+    # Super-resolution Anlaysis
+    def clickSRRun(self):
+        guard = self._checkSRParameters()
+        if guard == 1:
+            guard = self._runSRAnalysis()
+
+
+    def _checkSRParameters(self):
+        # Check if data path exists
+        data_path = self.window.SupRes_pathEntry.text()
+        if os.path.isdir(data_path) == False:
+            self.showMessage('w', 'Path to folder not found.')
+            return 0
+        else:
+            self.data_path = data_path
+            self.window.SupRes_pathEntry.setText(self.data_path)
+            self.updateLog('Data path set to ' + data_path)
+
+        try:
+            self.SRparameters = {
+            'method' : self.window.SupRes_methodSelector.currentText(),
+            'pixel_size' : float(self.window.SupRes_PixelSizeEntry.text()),
+            'camera_bias' : float(self.window.SupRes_CamBiasEntry.text()),
+            'camera_gain' : float(self.window.SupRes_CamGainEntry.text()),
+            'exposure_time' : float(self.window.SupRes_ExpTimeEntry.text()),
+            'scale' : float(self.window.SupRes_SRScaleEntry.text()),
+            'quantum_efficiency' : float(self.window.SupRes_QEEntry.text()),
+            'fid_method' : self.window.SupRes_FidCorrMethodSelector.currentText(),
+            'fid_brightness' : float(self.window.SupRes_FidCorrBrightnessEntry.text()),
+            'fid_time' : float(self.window.SupRes_FidCorrLastTimeEntry.text()),
+            'signal_strength' : 40,
+            'precision': 20.0,
+            'min_photons': 0
+            }
+        except ValueError:
+            self.showMessage('w', 'The parameters must be numbers.')
+            return 0
+
+        self.project = SuperResAnalysis(self.data_path, self.SRparameters) # Create project for super resolution analysis
+        if self.project.error == 1:
+            return 1
+        else:
+            self.showMessage('c', self.project.error)
+
+
+
+    def _runSRAnalysis(self):
+        self.initialiseProgress('SR analysis in process...', len(self.project.fov_paths))
+        # Create a QThread object
+        self.SRThread = QThread()
+        # Create a worker object
+        self.SRWorker = toolbox.SRWorker(self.SRparameters['method'], self.project, self.IJ)
+
+        # Connect signals and slots
+        self.SRThread.started.connect(self.SRWorker.run)
+        self.SRWorker.finished.connect(self.SRThread.quit)
+        self.SRWorker.finished.connect(self.SRWorker.deleteLater)
+        self.SRThread.finished.connect(self.SRThread.deleteLater)
+        # Move worker to the thread
+        self.SRWorker.moveToThread(self.SRThread)
+        # Connect progress signal to GUI
+        self.SRWorker.progress.connect(self.updateProgress)
+        # Start the thread
+        self.SRThread.start()
+        self.updateLog('Starting reconstruction...')
+        
+        # UI response
+        self.window.SupRes_runAnalysisButton.setEnabled(False) # Block 'Run' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runAnalysisButton.setEnabled(True) # Reset 'Run' button
+            )
+        self.SRThread.finished.connect(
+            lambda: self.updateLog('Reconstruction finished.')
+            )
+        self.SRThread.finished.connect(
+            lambda: self.restProgress()
+            ) # Reset progress bar to rest
+#        try:
+#            self.SRThread.finished.connect(
+#                lambda: self._generateDFLSPReports()
+#                ) # Generate reports
+#        except:
+#            print(sys.exc_info())
+
     # Help informations
+
+    
     def helpComDet(self):
         self.showMessage('i', r"""                                                      ComDet
 Parameters:

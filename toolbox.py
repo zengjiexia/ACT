@@ -88,7 +88,6 @@ class DFLParticleFinder(QObject):
         self.finished.emit()
 
 
-
 class ReportWriter(QObject):
     finished = Signal()
     progress = Signal(int)
@@ -106,7 +105,6 @@ class ReportWriter(QObject):
             print(sys.exc_info())
 
         self.finished.emit()
-
 
 
 class LipoAssayWorker(QObject):
@@ -130,3 +128,31 @@ class LipoAssayWorker(QObject):
         self.finished.emit()
 
 
+class SRWorker(QObject):
+    finished = Signal()
+    progress = Signal(int)
+
+    def __init__(self, algorithm, project, IJ):
+        super().__init__()
+
+        self.algorithm = algorithm
+        self.project = project
+        self.IJ = IJ
+
+    @QtCore.Slot()
+    def run(self):
+        if self.algorithm == 'GDSC SMLM 1':
+            try:
+                self.project.call_GDSC_SMLM(progress_signal=self.progress, IJ=self.IJ)
+            except:
+                print(sys.exc_info())
+        elif self.algorithm == 'ThunderStorm':
+            try:
+                self.project.call_ThunderStorm(progress_signal=self.progress, IJ=self.IJ)
+            except:
+                print(sys.exc_info())
+        else:
+            pass
+
+
+        self.finished.emit()

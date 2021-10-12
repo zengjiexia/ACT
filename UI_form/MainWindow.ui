@@ -160,9 +160,9 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>150</y>
+        <y>140</y>
         <width>761</width>
-        <height>271</height>
+        <height>281</height>
        </rect>
       </property>
       <property name="sizePolicy">
@@ -307,7 +307,7 @@
         <x>10</x>
         <y>120</y>
         <width>761</width>
-        <height>311</height>
+        <height>301</height>
        </rect>
       </property>
       <property name="sizePolicy">
@@ -361,21 +361,21 @@
      <widget class="QLineEdit" name="SupRes_pathEntry">
       <property name="geometry">
        <rect>
-        <x>70</x>
-        <y>0</y>
-        <width>531</width>
+        <x>71</x>
+        <y>10</y>
+        <width>431</width>
         <height>19</height>
        </rect>
       </property>
       <property name="text">
-       <string>D:\Work\SupRes_test</string>
+       <string>D:\Work\SupRes_test\Sample</string>
       </property>
      </widget>
      <widget class="QLabel" name="SupRes_pathLabel">
       <property name="geometry">
        <rect>
-        <x>18</x>
-        <y>0</y>
+        <x>19</x>
+        <y>10</y>
         <width>45</width>
         <height>19</height>
        </rect>
@@ -384,18 +384,23 @@
        <string>Path</string>
       </property>
      </widget>
-     <widget class="QComboBox" name="SupRes_MethodSelector">
+     <widget class="QComboBox" name="SupRes_methodSelector">
       <property name="geometry">
        <rect>
-        <x>609</x>
-        <y>0</y>
+        <x>510</x>
+        <y>10</y>
         <width>151</width>
         <height>20</height>
        </rect>
       </property>
       <item>
        <property name="text">
-        <string>GSDC SMLM 1</string>
+        <string>GDSC SMLM 1</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>ThunderStorm</string>
        </property>
       </item>
      </widget>
@@ -403,54 +408,33 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>20</y>
+        <y>70</y>
         <width>761</width>
-        <height>71</height>
+        <height>55</height>
        </rect>
       </property>
       <property name="title">
        <string>Microscope Parameters</string>
       </property>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="1" column="2">
-        <widget class="QLabel" name="SupRes_CamGainLabel">
+       <item row="0" column="0">
+        <widget class="QLabel" name="SupRes_PixelSizeLabel">
          <property name="text">
-          <string>Camera Gain</string>
+          <string>Pixel Size/nm</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
+       <item row="0" column="3">
         <widget class="QLineEdit" name="SupRes_CamBiasEntry">
          <property name="text">
           <string>400.0</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="3">
-        <widget class="QLineEdit" name="SupRes_CamGainEntry">
+       <item row="0" column="4">
+        <widget class="QLabel" name="SupRes_CamGainLabel">
          <property name="text">
-          <string>84.40</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="SupRes_CamBiasLabel">
-         <property name="text">
-          <string>Camera Bias</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="2">
-        <widget class="QLabel" name="SupRes_SRScaleLabel">
-         <property name="text">
-          <string>Super-resolution Scale</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QLabel" name="SupRes_PixelSizeLabel">
-         <property name="text">
-          <string>Pixel Size/nm</string>
+          <string>Camera Gain</string>
          </property>
         </widget>
        </item>
@@ -461,10 +445,17 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="3">
-        <widget class="QLineEdit" name="SupRes_SRScaleEntry">
+       <item row="0" column="2">
+        <widget class="QLabel" name="SupRes_CamBiasLabel">
          <property name="text">
-          <string>8</string>
+          <string>Camera Bias</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="5">
+        <widget class="QLineEdit" name="SupRes_CamGainEntry">
+         <property name="text">
+          <string>84.40</string>
          </property>
         </widget>
        </item>
@@ -474,376 +465,151 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>90</y>
+        <y>130</y>
         <width>761</width>
-        <height>221</height>
+        <height>55</height>
        </rect>
       </property>
       <property name="title">
-       <string>Image Process Parameters</string>
+       <string>Method Parameters</string>
       </property>
       <layout class="QGridLayout" name="gridLayout_6">
-       <item row="0" column="3">
-        <widget class="QLineEdit" name="SupRes_SignalStrengthEntry">
-         <property name="text">
-          <string>40</string>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="0">
-        <widget class="QLabel" name="SupRes_PrecisionLabel">
-         <property name="text">
-          <string>Precision</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="2">
-        <widget class="QLabel" name="SupRes_SignalStrengthLabel">
-         <property name="text">
-          <string>Signal Strength</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLineEdit" name="SupRes_ExpTimeEntry">
-         <property name="text">
-          <string>50</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="3">
-        <widget class="QLineEdit" name="SupRes_MinPhotonEntry">
-         <property name="text">
-          <string>0</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
         <widget class="QLabel" name="SupRes_ExpTimeLabel">
          <property name="text">
           <string>Exposure Time/ms</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="0">
-        <widget class="QCheckBox" name="SupRes_PeakFitCheckBox">
+       <item row="1" column="4">
+        <widget class="QLabel" name="SupRes_QELabel">
          <property name="text">
-          <string>GDSC SMLM peak fit</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="2">
-        <widget class="QLabel" name="SupRes_MinPhotonLabel">
-         <property name="text">
-          <string>Min Photons</string>
+          <string>Quantum Efficiency</string>
          </property>
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QLineEdit" name="SupRes_PrecisionEntry">
+        <widget class="QLineEdit" name="SupRes_ExpTimeEntry">
          <property name="text">
-          <string>20.0</string>
+          <string>50</string>
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
-        <widget class="QCheckBox" name="SupRes_BgMeasureCheckBox">
+       <item row="1" column="2">
+        <widget class="QLabel" name="SupRes_SRScaleLabel">
          <property name="text">
-          <string>Background Measurement</string>
+          <string>Super-resolution Scale</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
-        <widget class="QCheckBox" name="SupRes_FidCorrCheckBox">
+       <item row="1" column="3">
+        <widget class="QLineEdit" name="SupRes_SRScaleEntry">
          <property name="text">
-          <string>Fiducial Correction</string>
+          <string>8</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="1" rowspan="4" colspan="3">
-        <widget class="QGroupBox" name="SupRes_FidCorrBox">
-         <property name="enabled">
-          <bool>false</bool>
+       <item row="1" column="5">
+        <widget class="QLineEdit" name="SupRes_QEEntry">
+         <property name="text">
+          <string>1</string>
          </property>
-         <property name="title">
-          <string>Fiducial Correction</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_7">
-          <item row="4" column="0">
-           <widget class="QLabel" name="SupRes_FidCorrLastTimeLabel">
-            <property name="text">
-             <string>Last Time/frames</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="SupRes_FidCorrBrightnessLabel">
-            <property name="text">
-             <string>Brightness</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="2">
-           <widget class="QLineEdit" name="SupRes_FidCorrBrightnessEntry">
-            <property name="text">
-             <string>10000</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="2">
-           <widget class="QLineEdit" name="SupRes_FidCorrLastTimeEntry">
-            <property name="text">
-             <string>500</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="3">
-           <widget class="QLabel" name="SupRes_FidCorrSizeLabel">
-            <property name="text">
-             <string>Size</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="3">
-           <widget class="QCheckBox" name="SupRes_LimitSmoCheckBox">
-            <property name="text">
-             <string>Limit Smoothing</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
-           <widget class="QLabel" name="SupRes_FidCorrBinSizeLabel">
-            <property name="text">
-             <string>Bin Size/nm</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="4">
-           <widget class="QLineEdit" name="SupRes_FidCorrSmoEntry">
-            <property name="text">
-             <string>0.25</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="4">
-           <widget class="QLineEdit" name="SupRes_FidCorrSizeEntry">
-            <property name="text">
-             <string>6</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="3">
-           <widget class="QLabel" name="SupRes_FidCorrSmoLabel">
-            <property name="text">
-             <string>Smoothing</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="2">
-           <widget class="QLineEdit" name="SupRes_FidCorrBinSizeEntry">
-            <property name="text">
-             <string>20</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="3">
-           <widget class="QLabel" name="SupRes_FidCorrSegParaLabel">
-            <property name="text">
-             <string>Seg para/frames</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="4">
-           <widget class="QLineEdit" name="SupRes_FidCorrSegParaEntry">
-            <property name="text">
-             <string>500</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QLabel" name="SupRes_FidCorrMethodLabel">
-            <property name="text">
-             <string>Fiducial Method</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2" colspan="3">
-           <widget class="QComboBox" name="SupRes_FidCorrMethodSelector">
-            <item>
-             <property name="text">
-              <string>Auto fiducial</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Fiducial file</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Drift correction</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Correlation correction</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-         </layout>
         </widget>
        </item>
       </layout>
      </widget>
-     <widget class="QGroupBox" name="groupBox_3">
+     <widget class="QGroupBox" name="SupRes_ClusteringBox">
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>310</y>
+        <y>290</y>
         <width>761</width>
-        <height>101</height>
+        <height>111</height>
        </rect>
       </property>
       <property name="title">
        <string>Cluster Analysis Parameters</string>
       </property>
       <layout class="QGridLayout" name="gridLayout_8">
+       <item row="1" column="5">
+        <widget class="QLabel" name="SupRes_minOnPropLabel">
+         <property name="text">
+          <string>Min on Prop</string>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="2">
-        <widget class="QLineEdit" name="lineEdit_10">
+        <widget class="QLineEdit" name="SupRes_dThreshEntry">
          <property name="text">
           <string>15</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="0">
-        <widget class="QCheckBox" name="checkBox_6">
-         <property name="text">
-          <string>DBSCAN</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLabel" name="label_11">
-         <property name="text">
-          <string>dThresh/nm</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="4">
-        <widget class="QLineEdit" name="lineEdit_11">
-         <property name="text">
-          <string>2</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="6">
-        <widget class="QLineEdit" name="lineEdit_14">
-         <property name="text">
-          <string>101</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QCheckBox" name="checkBox_5">
-         <property name="text">
-          <string>Temporal Grouping</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="3">
-        <widget class="QLabel" name="label_13">
-         <property name="text">
-          <string>Min Loc</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="5">
-        <widget class="QLabel" name="label_15">
-         <property name="text">
-          <string>tThresh/ms</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLabel" name="label_16">
-         <property name="text">
-          <string>Min Frame</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="2">
-        <widget class="QLineEdit" name="lineEdit_15">
-         <property name="text">
-          <string>2</string>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="4">
-        <widget class="QLineEdit" name="lineEdit_16">
+        <widget class="QLineEdit" name="SupRes_minBurstEntry">
          <property name="text">
           <string>2</string>
          </property>
         </widget>
        </item>
        <item row="1" column="6">
-        <widget class="QLineEdit" name="lineEdit_17">
+        <widget class="QLineEdit" name="SupRes_minOnPropEntry">
          <property name="text">
           <string>0.0</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="3">
-        <widget class="QLabel" name="label_17">
+       <item row="1" column="1">
+        <widget class="QLabel" name="SupRes_minFrameLabel">
          <property name="text">
-          <string>Min Burst</string>
+          <string>Min Frame</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="5">
-        <widget class="QLabel" name="label_18">
-         <property name="text">
-          <string>Min on Prop</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="6">
-        <widget class="QLineEdit" name="lineEdit_13">
+       <item row="0" column="4">
+        <widget class="QLineEdit" name="SupRes_minLocEntry">
          <property name="text">
           <string>2</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="5">
-        <widget class="QLabel" name="label_14">
+       <item row="0" column="3">
+        <widget class="QLabel" name="SupRes_minLocLabel">
          <property name="text">
-          <string>Min Sample</string>
+          <string>Min Loc</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QLineEdit" name="SupRes_minFrameEntry">
+         <property name="text">
+          <string>2</string>
          </property>
         </widget>
        </item>
        <item row="2" column="4">
-        <widget class="QLineEdit" name="lineEdit_12">
+        <widget class="QLineEdit" name="SupRes_EPSEntry">
          <property name="text">
           <string>75</string>
          </property>
         </widget>
        </item>
        <item row="2" column="3">
-        <widget class="QLabel" name="label_12">
+        <widget class="QLabel" name="SupRes_EPSLabel">
          <property name="text">
           <string>EPS/nm</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="label_19">
+       <item row="0" column="1">
+        <widget class="QLabel" name="SupRes_dThreshLabel">
          <property name="text">
-          <string>Subject</string>
+          <string>dThresh/nm</string>
          </property>
         </widget>
        </item>
        <item row="2" column="2">
-        <widget class="QComboBox" name="comboBox">
+        <widget class="QComboBox" name="SupRes_DBSCANSelector">
          <item>
           <property name="text">
            <string>Burst</string>
@@ -856,58 +622,215 @@
          </item>
         </widget>
        </item>
+       <item row="0" column="5">
+        <widget class="QLabel" name="SupRes_tThreshLabel">
+         <property name="text">
+          <string>tThresh/ms</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="SupRes_TempGroupingCheck">
+         <property name="text">
+          <string>Temporal Grouping</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="3">
+        <widget class="QLabel" name="SupRes_minBurstLabel">
+         <property name="text">
+          <string>Min Burst</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLabel" name="SupRes_DBSCANLabel">
+         <property name="text">
+          <string>Subject</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QCheckBox" name="SupRes_DBSCANCheck">
+         <property name="text">
+          <string>DBSCAN</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="5">
+        <widget class="QLabel" name="SupRes_minSampleLabel">
+         <property name="text">
+          <string>Min Sample</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="6">
+        <widget class="QLineEdit" name="SupRes_minSampleEntry">
+         <property name="text">
+          <string>2</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="6">
+        <widget class="QLineEdit" name="SupRes_tThreshEntry">
+         <property name="text">
+          <string>101</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
-     <widget class="QPushButton" name="pushButton">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>410</y>
-        <width>121</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Save Configuration</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_2">
-      <property name="geometry">
-       <rect>
-        <x>140</x>
-        <y>410</y>
-        <width>121</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Load Configuration</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_3">
+     <widget class="QPushButton" name="SupRes_runAnalysisButton">
       <property name="geometry">
        <rect>
         <x>650</x>
-        <y>410</y>
+        <y>260</y>
         <width>121</width>
-        <height>21</height>
+        <height>25</height>
        </rect>
       </property>
       <property name="text">
        <string>Run Analysis</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="pushButton_4">
+     <widget class="QPushButton" name="SupRes_runClusteringButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="geometry">
        <rect>
-        <x>520</x>
-        <y>410</y>
+        <x>650</x>
+        <y>405</y>
         <width>121</width>
-        <height>21</height>
+        <height>25</height>
        </rect>
       </property>
       <property name="text">
        <string>Run Clustering</string>
+      </property>
+     </widget>
+     <widget class="QGroupBox" name="SupRes_FidCorrBox">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>190</y>
+        <width>761</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Fiducial Correction</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_7">
+       <item row="1" column="4">
+        <widget class="QLabel" name="SupRes_FidCorrBrightnessLabel">
+         <property name="text">
+          <string>Brightness</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <widget class="QLabel" name="SupRes_FidCorrMethodLabel">
+         <property name="text">
+          <string>Fiducial Method</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2" colspan="2">
+        <widget class="QComboBox" name="SupRes_FidCorrMethodSelector">
+         <item>
+          <property name="text">
+           <string>Auto fiducial</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Fiducial file</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Drift correction</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Correlation correction</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="6">
+        <widget class="QLabel" name="SupRes_FidCorrLastTimeLabel">
+         <property name="text">
+          <string>Last Time/frames</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="5">
+        <widget class="QLineEdit" name="SupRes_FidCorrBrightnessEntry">
+         <property name="text">
+          <string>10000</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="7">
+        <widget class="QLineEdit" name="SupRes_FidCorrLastTimeEntry">
+         <property name="text">
+          <string>500</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QPushButton" name="SupRes_loadButton">
+      <property name="geometry">
+       <rect>
+        <x>670</x>
+        <y>10</y>
+        <width>93</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="text">
+       <string>Load</string>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="comboBox">
+      <property name="geometry">
+       <rect>
+        <x>210</x>
+        <y>40</y>
+        <width>551</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <item>
+       <property name="text">
+        <string>New</string>
+       </property>
+      </item>
+     </widget>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>40</y>
+        <width>111</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Previous attempts</string>
       </property>
      </widget>
     </widget>

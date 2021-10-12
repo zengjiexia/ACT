@@ -31,6 +31,7 @@ Requirements
 	- os
 	- sys
 	- re
+	- datatime
 	- [opencv - 4.1.2.30](https://pypi.org/project/opencv-contrib-python/)
 	- [tqdm - 4.60.0](https://pypi.org/project/tqdm/)
 	- [astropy - 4.0.2](https://www.astropy.org/)

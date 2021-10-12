@@ -488,5 +488,3 @@ if __name__ in ['__builtin__', '__main__']:
 
 	IJ.run("Quit")
 	
-	
-		

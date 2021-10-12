@@ -1,5 +1,6 @@
 import os
 import re
+from datetime import datetime
 import cv2
 import pandas as pd
 from tqdm import tqdm
@@ -685,7 +686,94 @@ class LiposomeAssayAnalysis:
 
 class SuperResAnalysis:
     
-    def __init__(self, data_path):
+    def __init__(self, data_path, parameters): 
+        self.error = 1 # When this value is 1, no error was detected in the object.
+        self.path_program = os.path.dirname(__file__)
+        self.path_data_main = data_path
+        self.parameters = parameters
+        self.gather_project_info()
+
+
+    def gather_project_info(self):
+
+        self.fov_paths = {} # dict - FoV name: path to the corresponding image
+
+        for root, dirs, files in os.walk(self.path_data_main):
+            for file in files:
+                if file.endswith(".tif"):
+                    try:
+                        pos = re.findall(r"X\dY\dR\dW\dC\d", file)[-1]
+                    except IndexError:
+                        self.error = 'Error in the naming system of the images. Please make sure the image names contain coordinate in form of XnYnRnWnCn.'
+                        return 0
+                    self.fov_paths[pos] = os.path.join(root, file)
+
+        self.wells = {} # dict - well name: list of FoV taken in the well
+
+        for fov in self.fov_paths:
+            if fov[:4] in self.wells:
+                self.wells[fov[:4]] += [fov]
+            else:
+                self.wells[fov[:4]] = [fov]
+
+        # Check if the images are stacks
+        test_img = io.imread(list(self.fov_paths.values())[0])
+        if len(test_img.shape) != 3: 
+            self.error = 'The images are not stacked. Please check.'
+            return 0
+
+        return 1
+
+
+    def _prepare_reconstruction(self):
+        """
+        Prepare the configuration files for reconstruction
+        Create relative folders for results
+        """
+
+        # Construct dirs for results
+        self.timeStamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        self.path_result_main = self.path_data_main + '_' + self.timeStamp + '_' + self.parameters['method']
+        if os.path.isdir(self.path_result_main) != 1:
+            os.mkdir(self.path_result_main)
+        self.path_result_raw = os.path.join(self.path_result_main, 'raw')
+        if os.path.isdir(self.path_result_raw) != 1:
+            os.mkdir(self.path_result_raw)
+
+        # Build Fiji marco
+        if self.parameters['method'] == 'GDSC SMLM 1':
+            self.macro = """
+            run("Peak Fit", "template=[None] config_file=["""+os.path.join(self.path_result_raw, 'gdsc.smlm.settings.xml') +"""] calibration="""+str(self.parameters['pixel_size'])+""" gain="""+str(self.parameters['camera_gain'])+""" exposure_time="""+str(self.parameters['exposure_time'])+""" initial_stddev0=2.000 initial_stddev1=2.000 initial_angle=0.000 smoothing=0.50 smoothing2=3 search_width=3 fit_solver=[Least Squares Estimator (LSE)] fit_function=Circular local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 fail_limit=10 include_neighbours neighbour_height=0.30 residuals_threshold=1 duplicate_distance=0.50 shift_factor=2 signal_strength="""+str(self.parameters['signal_strength'])+""" width_factor=2 precision="""+str(self.parameters['precision'])+""" min_photons="""+str(self.parameters['min_photons'])+""" results_table=Uncalibrated image=[Localisations (width=precision)] weighted equalised image_precision=5 image_scale="""+str(self.parameters['scale'])+""" results_dir=["""+self.path_result_raw+"""] local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 stack");
+            """
+        # Generate configuration file
+
+        
+    def call_GDSC_SMLM(self, progress_signal=None, IJ=None):
+
+        if progress_signal == None: #i.e. running in non-GUI mode
+            path_fiji = os.path.join(self.path_program, 'Fiji.app')
+            IJ = imagej.init(path_fiji, headless=False)
+            IJ.ui().showUI()
+            workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
+        else:
+            workload = sorted(self.fov_paths)
+            IJ.ui().showUI()
+            c = 0 # progress indicator
+
+        self._prepare_reconstruction()
+
+        for field in workload:
+            imgFile = self.fov_paths[field]
+            saveto = os.path.join(self.path_result_raw, field)
+            saveto = saveto.replace("\\", "/")
+            img = IJ.io().open(imgFile)
+            IJ.ui().show(field, img)
+            IJ.py.run_macro(self.macro)
+
+            
+
+
+    def call_ThunderStorm(self, progress_signal=None, IJ=None):
         pass
 
 
