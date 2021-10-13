@@ -12,6 +12,9 @@ from logics import SimPullAnalysis, LiposomeAssayAnalysis, SuperResAnalysis
 import pandas as pd
 import numpy as np
 import imagej
+import scyjava
+plugins_dir = os.path.join(os.path.dirname(__file__), 'Fiji.app/plugins')
+scyjava.config.add_option(f'-Dplugins.dir={plugins_dir}')
 pg.setConfigOption('background', 'w')
 
 class MainWindow(QMainWindow):
@@ -490,10 +493,11 @@ class MainWindow(QMainWindow):
             return 0
 
         self.project = SuperResAnalysis(self.data_path, self.SRparameters) # Create project for super resolution analysis
-        if self.project.error == 1:
-            return 1
-        else:
+        if self.project.error != 1:
             self.showMessage('c', self.project.error)
+            return 0
+        else:
+            return 1
 
 
 

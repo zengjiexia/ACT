@@ -20,7 +20,9 @@ import multiprocessing
 from pathos.multiprocessing import ProcessingPool as Pool
 from functools import partial
 import psutil
-
+import scyjava
+plugins_dir = os.path.join(os.path.dirname(__file__), 'Fiji.app/plugins')
+scyjava.config.add_option(f'-Dplugins.dir={plugins_dir}')
 
 class SimPullAnalysis:
 
@@ -691,7 +693,16 @@ class SuperResAnalysis:
         self.path_program = os.path.dirname(__file__)
         self.path_data_main = data_path
         self.parameters = parameters
-        self.gather_project_info()
+
+        if self.gather_project_info() == 1:
+            # Construct dirs for results
+            self.timeStamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            self.path_result_main = self.path_data_main + '_' + self.timeStamp + '_' + self.parameters['method']
+            if os.path.isdir(self.path_result_main) != 1:
+                os.mkdir(self.path_result_main)
+            self.path_result_raw = os.path.join(self.path_result_main, 'raw')
+            if os.path.isdir(self.path_result_raw) != 1:
+                os.mkdir(self.path_result_raw)
 
 
     def gather_project_info(self):
@@ -724,28 +735,20 @@ class SuperResAnalysis:
 
         return 1
 
-
-    def _prepare_reconstruction(self):
-        """
-        Prepare the configuration files for reconstruction
-        Create relative folders for results
-        """
-
-        # Construct dirs for results
-        self.timeStamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        self.path_result_main = self.path_data_main + '_' + self.timeStamp + '_' + self.parameters['method']
-        if os.path.isdir(self.path_result_main) != 1:
-            os.mkdir(self.path_result_main)
-        self.path_result_raw = os.path.join(self.path_result_main, 'raw')
-        if os.path.isdir(self.path_result_raw) != 1:
-            os.mkdir(self.path_result_raw)
-
-        # Build Fiji marco
+    def _compose_fiji_macro(self, field_name):
+        path_result_raw_for_macro = self.path_result_raw.replace('\\', '/') # the \ does not work in fiji script, replace with /.
         if self.parameters['method'] == 'GDSC SMLM 1':
             self.macro = """
-            run("Peak Fit", "template=[None] config_file=["""+os.path.join(self.path_result_raw, 'gdsc.smlm.settings.xml') +"""] calibration="""+str(self.parameters['pixel_size'])+""" gain="""+str(self.parameters['camera_gain'])+""" exposure_time="""+str(self.parameters['exposure_time'])+""" initial_stddev0=2.000 initial_stddev1=2.000 initial_angle=0.000 smoothing=0.50 smoothing2=3 search_width=3 fit_solver=[Least Squares Estimator (LSE)] fit_function=Circular local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 fail_limit=10 include_neighbours neighbour_height=0.30 residuals_threshold=1 duplicate_distance=0.50 shift_factor=2 signal_strength="""+str(self.parameters['signal_strength'])+""" width_factor=2 precision="""+str(self.parameters['precision'])+""" min_photons="""+str(self.parameters['min_photons'])+""" results_table=Uncalibrated image=[Localisations (width=precision)] weighted equalised image_precision=5 image_scale="""+str(self.parameters['scale'])+""" results_dir=["""+self.path_result_raw+"""] local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 stack");
+            run("Peak Fit", "template=[None] config_file=["""+path_result_raw_for_macro + '/gdsc.smlm.settings.xml' +"""] calibration="""+str(self.parameters['pixel_size'])+""" gain="""+str(self.parameters['camera_gain'])+""" exposure_time="""+str(self.parameters['exposure_time'])+""" initial_stddev0=2.000 initial_stddev1=2.000 initial_angle=0.000 smoothing=0.50 smoothing2=3 search_width=3 fit_solver=[Least Squares Estimator (LSE)] fit_function=Circular local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 fail_limit=10 include_neighbours neighbour_height=0.30 residuals_threshold=1 duplicate_distance=0.50 shift_factor=2 signal_strength="""+str(self.parameters['signal_strength'])+""" width_factor=2 precision="""+str(self.parameters['precision'])+""" min_photons="""+str(self.parameters['min_photons'])+""" results_table=Uncalibrated image=[Localisations (width=precision)] weighted equalised image_precision=5 image_scale="""+str(self.parameters['scale'])+""" local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 stack");
+            selectWindow(\""""+field_name+""" (LSE) SuperRes\");
+            saveAs("tif", \""""+path_result_raw_for_macro + '/SR_' + field_name+""".tif\");
+            close(\"SR_"""+field_name+""".tif\");
+            selectWindow("Fit Results");
+            saveAs("Results", \""""+path_result_raw_for_macro + '/' + field_name+"""_results.csv\");
+            close("Fit Results");
+            close("Log");
+            close(\""""+field_name+"""\");
             """
-        # Generate configuration file
 
         
     def call_GDSC_SMLM(self, progress_signal=None, IJ=None):
@@ -757,10 +760,7 @@ class SuperResAnalysis:
             workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
         else:
             workload = sorted(self.fov_paths)
-            IJ.ui().showUI()
             c = 0 # progress indicator
-
-        self._prepare_reconstruction()
 
         for field in workload:
             imgFile = self.fov_paths[field]
@@ -768,9 +768,10 @@ class SuperResAnalysis:
             saveto = saveto.replace("\\", "/")
             img = IJ.io().open(imgFile)
             IJ.ui().show(field, img)
+
+            self._compose_fiji_macro(field)
             IJ.py.run_macro(self.macro)
 
-            
 
 
     def call_ThunderStorm(self, progress_signal=None, IJ=None):
@@ -781,19 +782,19 @@ class SuperResAnalysis:
 
 if __name__ == "__main__":
 
-    path = input('Please input the path for analysis:\n')
-    if os.path.isdir(path) != True:
-    	print('Please input valid directory for data.')
-    	quit()
-    project = SimPullAnalysis(path)
-    print('Launching: ' + path)
-    size = input('Please input the estimated size of particles(in pixels):\n')
-    threshold = input('Please input the threshold to apply(in nSD):\n')
-    print('Picking up particles in Fiji...')
-    project.call_ComDet(size=size, threshold=threshold)
-    print('Generating reports...')
-    project.generate_reports()
-    print('Done.')
+    #path = input('Please input the path for analysis:\n')
+    #if os.path.isdir(path) != True:
+    #	print('Please input valid directory for data.')
+    #	quit()
+    project = SuperResAnalysis(r"D:\Work\Supres_test\Sample", {'method': 'GDSC SMLM 1'})
+    #print('Launching: ' + path)
+    #size = input('Please input the estimated size of particles(in pixels):\n')
+    #threshold = input('Please input the threshold to apply(in nSD):\n')
+    #print('Picking up particles in Fiji...')
+    project.call_GDSC_SMLM()
+    #print('Generating reports...')
+    #project.generate_reports()
+    #print('Done.')
 
 
 
