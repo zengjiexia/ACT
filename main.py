@@ -500,7 +500,6 @@ class MainWindow(QMainWindow):
             return 1
 
 
-
     def _runSRAnalysis(self):
         self.initialiseProgress('SR analysis in process...', len(self.project.fov_paths))
         # Create a QThread object

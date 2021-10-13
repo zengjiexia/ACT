@@ -135,24 +135,15 @@ class SRWorker(QObject):
     def __init__(self, algorithm, project, IJ):
         super().__init__()
 
-        self.algorithm = algorithm
+        self.algorithm = algorithm # This instance not in use
         self.project = project
         self.IJ = IJ
 
     @QtCore.Slot()
     def run(self):
-        if self.algorithm == 'GDSC SMLM 1':
-            try:
-                self.project.call_GDSC_SMLM(progress_signal=self.progress, IJ=self.IJ)
-            except:
-                print(sys.exc_info())
-        elif self.algorithm == 'ThunderStorm':
-            try:
-                self.project.call_ThunderStorm(progress_signal=self.progress, IJ=self.IJ)
-            except:
-                print(sys.exc_info())
-        else:
-            pass
-
+        try:
+            self.project.superRes_reconstruction(progress_signal=self.progress, IJ=self.IJ)
+        except:
+            print(sys.exc_info())
 
         self.finished.emit()

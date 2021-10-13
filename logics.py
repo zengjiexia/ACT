@@ -749,9 +749,21 @@ class SuperResAnalysis:
             close("Log");
             close(\""""+field_name+"""\");
             """
-
+        elif self.parameters['method'] == 'ThunderSTORM':
+            self.macro = """
+            run("Camera setup", "offset="""+str(self.parameters['camera_bias'])+""" quantumefficiency="""+str(self.parameters['quantum_efficiency'])+""" isemgain=true photons2adu=3.6 gainem="""+str(self.parameters['camera_gain'])+""" pixelsize="""+str(self.parameters['pixel_size'])+"""");
+            run("Run analysis", "filter=[Wavelet filter (B-Spline)] scale=2.0 order=3 detector=[Local maximum] connectivity=8-neighbourhood threshold=std(Wave.F1) estimator=[PSF: Integrated Gaussian] sigma=1.6 fitradius=3 method=[Weighted Least squares] full_image_fitting=false mfaenabled=false renderer=[Averaged shifted histograms] magnification="""+str(self.parameters['scale'])+""" colorize=false threed=false shifts=2 repaint="""+str(int(self.parameters['exposure_time']))+"""");
+            run("Export results", "floatprecision=5 filepath="""+path_result_raw_for_macro + '/' + field_name+"""_results.csv fileformat=[CSV (comma separated)] sigma=true intensity=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
+            selectWindow('Averaged shifted histograms');
+            saveAs("tif", \""""+path_result_raw_for_macro + '/SR_' + field_name+""".tif\");
+            close(\"SR_"""+field_name+""".tif\");
+            close(\""""+field_name+"""\");
+            selectWindow("ThunderSTORM: results");
+            close("ThunderSTORM: results");
+            """
         
-    def call_GDSC_SMLM(self, progress_signal=None, IJ=None):
+
+    def superRes_reconstruction(self, progress_signal=None, IJ=None):
 
         if progress_signal == None: #i.e. running in non-GUI mode
             path_fiji = os.path.join(self.path_program, 'Fiji.app')
@@ -771,12 +783,6 @@ class SuperResAnalysis:
 
             self._compose_fiji_macro(field)
             IJ.py.run_macro(self.macro)
-
-
-
-    def call_ThunderStorm(self, progress_signal=None, IJ=None):
-        pass
-
 
 
 
