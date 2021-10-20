@@ -483,6 +483,9 @@
        </item>
        <item row="1" column="4">
         <widget class="QLabel" name="SupRes_QELabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>Quantum Efficiency</string>
          </property>
@@ -511,6 +514,9 @@
        </item>
        <item row="1" column="5">
         <widget class="QLineEdit" name="SupRes_QEEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>1</string>
          </property>
@@ -690,7 +696,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Run Analysis</string>
+       <string>Run Reconstruction</string>
       </property>
      </widget>
      <widget class="QPushButton" name="SupRes_runClusteringButton">
@@ -718,29 +724,33 @@
         <x>10</x>
         <y>190</y>
         <width>761</width>
-        <height>61</height>
+        <height>53</height>
        </rect>
       </property>
       <property name="title">
        <string>Fiducial Correction</string>
       </property>
-      <layout class="QGridLayout" name="gridLayout_7">
-       <item row="1" column="4">
-        <widget class="QLabel" name="SupRes_FidCorrBrightnessLabel">
-         <property name="text">
-          <string>Brightness</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0" colspan="2">
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
         <widget class="QLabel" name="SupRes_FidCorrMethodLabel">
          <property name="text">
           <string>Fiducial Method</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="2" colspan="2">
+       <item>
         <widget class="QComboBox" name="SupRes_FidCorrMethodSelector">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <item>
+          <property name="text">
+           <string/>
+          </property>
+         </item>
          <item>
           <property name="text">
            <string>Auto fiducial</string>
@@ -748,37 +758,51 @@
          </item>
          <item>
           <property name="text">
-           <string>Fiducial file</string>
+           <string>Fiducial marker</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>Drift correction</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Correlation correction</string>
+           <string>Cross-correlation - ThunderSTORM</string>
           </property>
          </item>
         </widget>
        </item>
-       <item row="1" column="6">
-        <widget class="QLabel" name="SupRes_FidCorrLastTimeLabel">
+       <item>
+        <widget class="QLabel" name="SupRes_FidCorrParaLabel1">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
-          <string>Last Time/frames</string>
+          <string>Brightness</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="5">
-        <widget class="QLineEdit" name="SupRes_FidCorrBrightnessEntry">
+       <item>
+        <widget class="QLineEdit" name="SupRes_FidCorrParaEntry1">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>10000</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="7">
-        <widget class="QLineEdit" name="SupRes_FidCorrLastTimeEntry">
+       <item>
+        <widget class="QLabel" name="SupRes_FidCorrParaLabel2">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Last Time/frames</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="SupRes_FidCorrParaEntry2">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>500</string>
          </property>
@@ -805,7 +829,7 @@
        <string>Load</string>
       </property>
      </widget>
-     <widget class="QComboBox" name="comboBox">
+     <widget class="QComboBox" name="SupRes_previousAttemptSelector">
       <property name="geometry">
        <rect>
         <x>210</x>
@@ -820,7 +844,7 @@
        </property>
       </item>
      </widget>
-     <widget class="QLabel" name="label">
+     <widget class="QLabel" name="SupRes_previousAttemptsLabel">
       <property name="geometry">
        <rect>
         <x>20</x>
@@ -831,6 +855,22 @@
       </property>
       <property name="text">
        <string>Previous attempts</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pushButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>514</x>
+        <y>260</y>
+        <width>121</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Run Fiducial Correction</string>
       </property>
      </widget>
     </widget>

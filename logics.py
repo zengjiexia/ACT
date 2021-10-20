@@ -733,13 +733,17 @@ class SuperResAnalysis:
             self.error = 'The images are not stacked. Please check.'
             return 0
 
+        # Get image dimensions
+        self.dimensions = list(test_img.shape)[1:]
+
         return 1
+
 
     def _compose_fiji_macro(self, field_name):
         path_result_raw_for_macro = self.path_result_raw.replace('\\', '/') # the \ does not work in fiji script, replace with /.
         if self.parameters['method'] == 'GDSC SMLM 1':
             self.macro = """
-            run("Peak Fit", "template=[None] config_file=["""+path_result_raw_for_macro + '/gdsc.smlm.settings.xml' +"""] calibration="""+str(self.parameters['pixel_size'])+""" gain="""+str(self.parameters['camera_gain'])+""" exposure_time="""+str(self.parameters['exposure_time'])+""" initial_stddev0=2.000 initial_stddev1=2.000 initial_angle=0.000 smoothing=0.50 smoothing2=3 search_width=3 fit_solver=[Least Squares Estimator (LSE)] fit_function=Circular local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 fail_limit=10 include_neighbours neighbour_height=0.30 residuals_threshold=1 duplicate_distance=0.50 shift_factor=2 signal_strength="""+str(self.parameters['signal_strength'])+""" width_factor=2 precision="""+str(self.parameters['precision'])+""" min_photons="""+str(self.parameters['min_photons'])+""" results_table=Uncalibrated image=[Localisations (width=precision)] weighted equalised image_precision=5 image_scale="""+str(self.parameters['scale'])+""" local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 stack");
+            run("Peak Fit", "template=[None] config_file=["""+path_result_raw_for_macro + '/gdsc.smlm.settings.xml' +"""] calibration="""+str(self.parameters['pixel_size'])+""" gain="""+str(self.parameters['camera_gain'])+""" exposure_time="""+str(self.parameters['exposure_time'])+""" initial_stddev0=2.000 initial_stddev1=2.000 initial_angle=0.000 smoothing=0.50 smoothing2=3 search_width=3 fit_solver=[Least Squares Estimator (LSE)] fit_function=Circular local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 fail_limit=10 include_neighbours neighbour_height=0.30 residuals_threshold=1 duplicate_distance=0.50 shift_factor=2 signal_strength="""+str(self.parameters['signal_strength'])+""" width_factor=2 precision="""+str(self.parameters['precision'])+""" min_photons="""+str(self.parameters['min_photons'])+""" results_table=Uncalibrated image=[Localisations (width=precision)] weighted equalised image_precision=5 image_scale="""+str(self.parameters['scale'])+""" results_dir=["""+path_result_raw_for_macro+"""] local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 stack");
             selectWindow(\""""+field_name+""" (LSE) SuperRes\");
             saveAs("tif", \""""+path_result_raw_for_macro + '/SR_' + field_name+""".tif\");
             close(\"SR_"""+field_name+""".tif\");
@@ -758,8 +762,6 @@ class SuperResAnalysis:
             saveAs("tif", \""""+path_result_raw_for_macro + '/SR_' + field_name+""".tif\");
             close(\"SR_"""+field_name+""".tif\");
             close(\""""+field_name+"""\");
-            selectWindow("ThunderSTORM: results");
-            close("ThunderSTORM: results");
             """
         
 
@@ -783,6 +785,25 @@ class SuperResAnalysis:
 
             self._compose_fiji_macro(field)
             IJ.py.run_macro(self.macro)
+
+            if progress_signal == None:
+                pass
+            else:
+                c += 1
+                progress_signal.emit(c)
+        return 1
+
+
+    def superRes_fiducialCorrection(self, progress_signal=None, IJ=None):
+        if progress_signal == None: #i.e. running in non-GUI mode
+            path_fiji = os.path.join(self.path_program, 'Fiji.app')
+            IJ = imagej.init(path_fiji, headless=False)
+            IJ.ui().showUI()
+            workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
+        else:
+            workload = sorted(self.fov_paths)
+            c = 0 # progress indicator
+            # working...
 
 
 

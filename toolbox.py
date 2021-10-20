@@ -132,18 +132,24 @@ class SRWorker(QObject):
     finished = Signal()
     progress = Signal(int)
 
-    def __init__(self, algorithm, project, IJ):
+    def __init__(self, job, project, IJ):
         super().__init__()
 
-        self.algorithm = algorithm # This instance not in use
+        self.job = job
         self.project = project
         self.IJ = IJ
 
     @QtCore.Slot()
     def run(self):
-        try:
-            self.project.superRes_reconstruction(progress_signal=self.progress, IJ=self.IJ)
-        except:
-            print(sys.exc_info())
+        if self.job == 'Reconstruction':
+            try:
+                self.project.superRes_reconstruction(progress_signal=self.progress, IJ=self.IJ)
+            except:
+                print(sys.exc_info())
+        elif self.job == 'FiducialCorrection':
+            try:
+                self.project.superRes_fiducialCorrection(progress_signal=self.progress, IJ=self.IJ)
+            except:
+                print(sys.exc_info())
 
         self.finished.emit()

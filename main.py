@@ -13,6 +13,7 @@ import pandas as pd
 import numpy as np
 import imagej
 import scyjava
+import json
 plugins_dir = os.path.join(os.path.dirname(__file__), 'Fiji.app/plugins')
 scyjava.config.add_option(f'-Dplugins.dir={plugins_dir}')
 pg.setConfigOption('background', 'w')
@@ -69,7 +70,11 @@ class MainWindow(QMainWindow):
         self.window.LipoAssay_runButton.clicked.connect(self.clickLipoAssayRun)
 
         # SR window widgets
-        self.window.SupRes_runAnalysisButton.clicked.connect(self.clickSRRun)
+        self.window.SupRes_runReconstructionButton.clicked.connect(self.clickSRRun)
+        self.window.SupRes_methodSelector.currentIndexChanged.connect(self._methodOptSR)
+        self.window.SupRes_FidCorrMethodSelector.currentIndexChanged.connect(self._methodOptSRFidCorr)
+        self.window.SupRes_loadButton.clicked.connect(self.clickLoadSRPreviousAttempts)
+        self.window.SupRes_previousAttemptSelector.currentIndexChanged.connect(self._SRPreviousAttemptSelected)
 
         ui_file.close()
         if not self.window:
@@ -455,10 +460,129 @@ class MainWindow(QMainWindow):
 
 
     # Super-resolution Anlaysis
+    def clickLoadSRPreviousAttempts(self):
+        # Check if data path exists
+        data_path = self.window.SupRes_pathEntry.text()
+        if os.path.isdir(data_path) == False:
+            self.showMessage('w', 'Path to folder not found.')
+            return 0
+        else:
+            self.data_path = data_path
+            self.window.SupRes_pathEntry.setText(self.data_path)
+            self.updateLog('Loading previous attempts from ' + data_path)
+
+        if self.data_path.endswith('\\'):
+            self.data_path = self.data_path[:-1]
+
+        previous_attempts = os.listdir(os.path.dirname(self.data_path))
+        previous_attempts.remove(os.path.basename(self.data_path))
+        self.updateLog(str(len(previous_attempts)) + ' previous attempts was/were found.')
+        self.previous_attempts = dict()
+        if len(previous_attempts) != 0:
+            self.window.SupRes_previousAttemptSelector.clear()
+            self.window.SupRes_previousAttemptSelector.addItem("New")
+            for i in previous_attempts:
+                self.previous_attempts[i] = os.path.join(os.path.dirname(self.data_path), i)
+                self.window.SupRes_previousAttemptSelector.addItem(i)
+
+
+    def _SRPreviousAttemptSelected(self):
+        selected_attempt = self.window.SupRes_previousAttemptSelector.currentText()
+
+        try:
+            with open(os.path.join(self.previous_attempts[selected_attempt], 'parameters.txt'), 'r') as js_file:
+                self.SRparameters = json.load(js_file)
+        except FileNotFoundError:
+            self.showMessage('w', 'Parameter info for selected attempt not found. Default parameters used.')
+            return 0
+        except KeyError:
+            self.window.SupRes_runFidCorrButton.setEnabled(False)
+            return 1
+
+        ind = self.window.SupRes_methodSelector.findText(self.SRparameters['method'])
+        if ind >= 0:
+            self.window.SupRes_methodSelector.setCurrentIndex(ind)
+
+        if self.SRparameters['method'] == 'ThunderSTORM':
+            self.window.SupRes_QEEntry.setText(str(self.SRparameters['quantum_efficiency']))
+
+        self.window.SupRes_PixelSizeEntry.setText(str(self.SRparameters['pixel_size']))
+        self.window.SupRes_CamBiasEntry.setText(str(self.SRparameters['camera_bias']))
+        self.window.SupRes_CamGainEntry.setText(str(self.SRparameters['camera_gain']))
+        self.window.SupRes_ExpTimeEntry.setText(str(self.SRparameters['exposure_time']))
+        self.window.SupRes_SRScaleEntry.setText(str(self.SRparameters['scale']))
+
+        ind = self.window.SupRes_FidCorrMethodSelector.findText(self.SRparameters['fid_method'])
+        if ind >= 0:
+            self.window.SupRes_FidCorrMethodSelector.setCurrentIndex(ind)
+        
+        if self.SRparameters['fid_method'] == 'Auto fiducial':
+            self.window.SupRes_FidCorrEntry1.setText(str(self.SRparameters['fid_brightness']))
+            self.window.SupRes_FidCorrEntry2.setText(str(self.SRparameters['fid_time']))
+        elif self.SRparameters['fid_method'] == 'Fiducial marker':
+            self.window.SupRes_FidCorrEntry1.setText(str(self.SRparameters['max_distance']))
+            self.window.SupRes_FidCorrEntry2.setText(str(self.SRparameters['min_visibility']))
+        elif self.SRparameters['fid_method'] == 'Cross-correlation - ThunderSTORM':
+            self.window.SupRes_FidCorrEntry1.setText(str(self.SRparameters['bin_size']))
+            self.window.SupRes_FidCorrEntry2.setText(str(self.SRparameters['magnification']))
+        else:
+            pass
+
+        self.window.SupRes_runFidCorrButton.setEnabled(True)
+        return 1
+
+
+    def _methodOptSR(self):
+        """
+        Block/Release parameter entry when a method is selected.
+        """
+        GDSC_only_fid_corr_methods = ['Auto fiducial'] # The methods listed will be deleted when ThunderSTROM is selected
+        if self.window.SupRes_methodSelector.currentText() == 'GDSC SMLM 1':
+            self.window.SupRes_QELabel.setEnabled(False)
+            self.window.SupRes_QEEntry.setEnabled(False)
+            for i in GDSC_only_fid_corr_methods:
+                if self.window.SupRes_FidCorrMethodSelector.findText(i) == -1:
+                    self.window.SupRes_FidCorrMethodSelector.addItem(i)
+
+        elif self.window.SupRes_methodSelector.currentText() == 'ThunderSTORM':
+            self.window.SupRes_QELabel.setEnabled(True)
+            self.window.SupRes_QEEntry.setEnabled(True)
+            for i in GDSC_only_fid_corr_methods:
+                ind = self.window.SupRes_FidCorrMethodSelector.findText(i)
+                if ind != -1:
+                    self.window.SupRes_FidCorrMethodSelector.removeItem(ind)
+
+
+    def _methodOptSRFidCorr(self):
+        """
+        Change the parameter required for fiducial correction methods.
+        * this section links to _checkSRParameters
+        """
+        if self.window.SupRes_FidCorrMethodSelector.currentText() == '':
+            self.window.SupRes_FidCorrParaLabel1.setEnabled(False)
+            self.window.SupRes_FidCorrParaLabel2.setEnabled(False)
+            self.window.SupRes_FidCorrParaEntry1.setEnabled(False)
+            self.window.SupRes_FidCorrParaEntry2.setEnabled(False)
+        else:
+            self.window.SupRes_FidCorrParaLabel1.setEnabled(True)
+            self.window.SupRes_FidCorrParaLabel2.setEnabled(True)
+            self.window.SupRes_FidCorrParaEntry1.setEnabled(True)
+            self.window.SupRes_FidCorrParaEntry2.setEnabled(True)
+            if self.window.SupRes_FidCorrMethodSelector.currentText() == 'Auto fiducial':
+                self.window.SupRes_FidCorrParaLabel1.setText('Brightness')
+                self.window.SupRes_FidCorrParaLabel2.setText('Last Time/frames')
+            elif self.window.SupRes_FidCorrMethodSelector.currentText() == 'Fiducial marker':
+                self.window.SupRes_FidCorrParaLabel1.setText('Max distance/nm')
+                self.window.SupRes_FidCorrParaLabel2.setText('Min visibility ratio')
+            elif self.window.SupRes_FidCorrMethodSelector.currentText() == 'Cross-correlation - ThunderSTORM':
+                self.window.SupRes_FidCorrParaLabel1.setText('Bin size')
+                self.window.SupRes_FidCorrParaLabel2.setText('Magnification')
+
+
     def clickSRRun(self):
         guard = self._checkSRParameters()
         if guard == 1:
-            guard = self._runSRAnalysis()
+            guard = self._runSRReconstruction()
 
 
     def _checkSRParameters(self):
@@ -472,7 +596,7 @@ class MainWindow(QMainWindow):
             self.window.SupRes_pathEntry.setText(self.data_path)
             self.updateLog('Data path set to ' + data_path)
 
-        try:
+        try: # Obtain parameters from UI
             self.SRparameters = {
             'method' : self.window.SupRes_methodSelector.currentText(),
             'pixel_size' : float(self.window.SupRes_PixelSizeEntry.text()),
@@ -480,14 +604,27 @@ class MainWindow(QMainWindow):
             'camera_gain' : float(self.window.SupRes_CamGainEntry.text()),
             'exposure_time' : float(self.window.SupRes_ExpTimeEntry.text()),
             'scale' : float(self.window.SupRes_SRScaleEntry.text()),
-            'quantum_efficiency' : float(self.window.SupRes_QEEntry.text()),
             'fid_method' : self.window.SupRes_FidCorrMethodSelector.currentText(),
-            'fid_brightness' : float(self.window.SupRes_FidCorrBrightnessEntry.text()),
-            'fid_time' : float(self.window.SupRes_FidCorrLastTimeEntry.text()),
             'signal_strength' : 40,
             'precision': 20.0,
-            'min_photons': 0
+            'min_photons': 0,
+            'smoothing_factor': 0.25
             }
+            if self.SRparameters['method'] == 'ThunderSTORM':
+                self.SRparameters['quantum_efficiency'] = float(self.window.SupRes_QEEntry.text())
+
+            if self.SRparameters['fid_method'] == 'Auto fiducial':
+                self.SRparameters['fid_brightness'] = float(self.window.SupRes_FidCorrEntry1.text())
+                self.SRparameters['fid_time'] = float(self.window.SupRes_FidCorrEntry2.text())
+            elif self.SRparameters['fid_method'] == 'Fiducial marker':
+                self.SRparameters['max_distance'] = float(self.window.SupRes_FidCorrEntry1.text())
+                self.SRparameters['min_visibility'] = float(self.window.SupRes_FidCorrEntry2.text())
+            elif self.SRparameters['fid_method'] == 'Cross-correlation - ThunderSTORM':
+                self.SRparameters['bin_size'] = float(self.window.SupRes_FidCorrEntry1.text())
+                self.SRparameters['magnification'] = float(self.window.SupRes_FidCorrEntry2.text())
+            else:
+                pass
+
         except ValueError:
             self.showMessage('w', 'The parameters must be numbers.')
             return 0
@@ -497,15 +634,17 @@ class MainWindow(QMainWindow):
             self.showMessage('c', self.project.error)
             return 0
         else:
+            with open(os.path.join(self.project.path_result_main, 'parameters.txt'), 'w') as js_file:
+                json.dump(self.SRparameters, js_file)
             return 1
 
 
-    def _runSRAnalysis(self):
-        self.initialiseProgress('SR analysis in process...', len(self.project.fov_paths))
+    def _runSRReconstruction(self):
+        self.initialiseProgress('Reconstructing SR images...', len(self.project.fov_paths))
         # Create a QThread object
         self.SRThread = QThread()
         # Create a worker object
-        self.SRWorker = toolbox.SRWorker(self.SRparameters['method'], self.project, self.IJ)
+        self.SRWorker = toolbox.SRWorker('Reconstruction', self.project, self.IJ)
 
         # Connect signals and slots
         self.SRThread.started.connect(self.SRWorker.run)
@@ -521,12 +660,62 @@ class MainWindow(QMainWindow):
         self.updateLog('Starting reconstruction...')
         
         # UI response
+        self.window.SupRes_runReconstructionButton.setEnabled(False) # Block 'Run Reconstruction' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runReconstructionButton.setEnabled(True) # Reset 'Run Reconstruction' button
+            )
+        self.window.SupRes_loadButton.setEnabled(False) # Block 'Load' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_loadButton.setEnabled(True) # Reset 'Load' button
+            )
+        self.window.SupRes_runFidCorrButton.setEnabled(False) # Block 'Run Fiducial Correction' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runFidCorrButton.setEnabled(True) # Enable 'Run fiducial correction' button
+            )
+        self.SRThread.finished.connect(
+            lambda: self.updateLog('Reconstruction completed.')
+            )
+        self.SRThread.finished.connect(
+            lambda: self.restProgress()
+            ) # Reset progress bar to rest
+        if self.SRparameters['fid_method'] == '': # if no fid method selected, skip. Otherwise trigger drift correction
+            pass 
+        else:
+            try:
+                self.SRThread.finished.connect(
+                    lambda: self._runSRFidCorr()
+                    ) 
+            except:
+                print(sys.exc_info())
+
+
+    def _runSRFidCorr(self):
+        self.initialiseProgress('Drift correcting...', len(self.project.fov_paths))
+        # Create a QThread object
+        self.SRThread = QThread()
+        # Create a worker object
+        self.SRWorker = toolbox.SRWorker('FiducialCorrection', self.project, self.IJ)
+
+        # Connect signals and slots
+        self.SRThread.started.connect(self.SRWorker.run)
+        self.SRWorker.finished.connect(self.SRThread.quit)
+        self.SRWorker.finished.connect(self.SRWorker.deleteLater)
+        self.SRThread.finished.connect(self.SRThread.deleteLater)
+        # Move worker to the thread
+        self.SRWorker.moveToThread(self.SRThread)
+        # Connect progress signal to GUI
+        self.SRWorker.progress.connect(self.updateProgress)
+        # Start the thread
+        self.SRThread.start()
+        self.updateLog('Starting drift correction by ' + self.SRparameters['fid_method'] + '...')
+        
+        # UI response
         self.window.SupRes_runAnalysisButton.setEnabled(False) # Block 'Run' button
         self.SRThread.finished.connect(
             lambda: self.window.SupRes_runAnalysisButton.setEnabled(True) # Reset 'Run' button
             )
         self.SRThread.finished.connect(
-            lambda: self.updateLog('Reconstruction finished.')
+            lambda: self.updateLog('Drift correction completed.')
             )
         self.SRThread.finished.connect(
             lambda: self.restProgress()
@@ -538,9 +727,8 @@ class MainWindow(QMainWindow):
 #        except:
 #            print(sys.exc_info())
 
-    # Help informations
 
-    
+    # Help informations
     def helpComDet(self):
         self.showMessage('i', r"""                                                      ComDet
 Parameters:

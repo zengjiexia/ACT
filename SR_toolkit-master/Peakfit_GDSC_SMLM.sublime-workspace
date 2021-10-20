@@ -1,0 +1,766 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"file",
+				"field_name"
+			],
+			[
+				"call",
+				"call_GDSC_SMLM"
+			],
+			[
+				"path",
+				"path_result_raw"
+			],
+			[
+				"__",
+				"__init__"
+			],
+			[
+				"bargra",
+				"bargraph"
+			],
+			[
+				"clickl",
+				"clickLipoAssayRun"
+			],
+			[
+				"genera",
+				"generate_reports"
+			],
+			[
+				"upda",
+				"updateLog"
+			],
+			[
+				"LipoAssay",
+				"LipoAssay_runButton"
+			],
+			[
+				"macro",
+				"macro_without_averaging\tstatement"
+			],
+			[
+				"mac",
+				"macro_with_averaging\tstatement"
+			],
+			[
+				"fo",
+				"fov_paths\tstatement"
+			],
+			[
+				"img",
+				"img_path\tstatement"
+			],
+			[
+				"msg",
+				"msgBox\tstatement"
+			],
+			[
+				"QM",
+				"QMessageBox\tclass"
+			],
+			[
+				"click",
+				"clickGenerateReports\tfunction"
+			],
+			[
+				"run",
+				"_runAnalysis\tfunction"
+			],
+			[
+				"data",
+				"data_path\tstatement"
+			],
+			[
+				"main",
+				"main_pathEntry"
+			],
+			[
+				"get",
+				"getExistingDirectory\tfunction"
+			],
+			[
+				"Qfile",
+				"QFileDialog\tclass"
+			],
+			[
+				"app",
+				"applyThresholds\tfunction"
+			],
+			[
+				"oa",
+				"oa_nareaPlotLine"
+			],
+			[
+				"inf",
+				"exc_info\tfunction"
+			],
+			[
+				"save",
+				"saveData\tfunction"
+			],
+			[
+				"fini",
+				"finish"
+			],
+			[
+				"thre",
+				"thred_path"
+			],
+			[
+				"to",
+				"to_csv"
+			],
+			[
+				"out",
+				"output_df"
+			],
+			[
+				"thr",
+				"thresholded_df\tstatement"
+			],
+			[
+				"thres",
+				"thresholded_df"
+			],
+			[
+				"NArea",
+				"NArea"
+			],
+			[
+				"int",
+				"intPerArea_plot"
+			],
+			[
+				"plot",
+				"plotHist"
+			],
+			[
+				"xa",
+				"xaxisSelection\tparam"
+			],
+			[
+				"x",
+				"xdict\tstatement"
+			],
+			[
+				"sum",
+				"sum_df\tstatement"
+			],
+			[
+				"filt",
+				"fileToUpdate\tstatement"
+			],
+			[
+				"progress",
+				"progress"
+			],
+			[
+				"progre",
+				"progress_signal\tparam"
+			],
+			[
+				"fov",
+				"fov_paths"
+			],
+			[
+				"naming",
+				"naming_system\tstatement"
+			],
+			[
+				"Inde",
+				"IndexError\tclass"
+			],
+			[
+				"wm",
+				"wm\tmodule"
+			],
+			[
+				"ex",
+				"except\tkeyword"
+			],
+			[
+				"repot",
+				"reportThread\tstatement"
+			],
+			[
+				"csv",
+				"csv"
+			],
+			[
+				"pat",
+				"path_result_main\tstatement"
+			],
+			[
+				"show",
+				"showMessage\tfunction"
+			],
+			[
+				"pro",
+				"project\tstatement"
+			],
+			[
+				"repor",
+				"reportThread\tstatement"
+			],
+			[
+				"de",
+				"deleteLater"
+			],
+			[
+				"reportwe",
+				"reportwriter\tstatement"
+			],
+			[
+				"repo",
+				"reportThread\tstatement"
+			],
+			[
+				"Re",
+				"ReportWriter\tclass"
+			],
+			[
+				"exc",
+				"exc_info"
+			],
+			[
+				"update",
+				"updateProgress\tfunction"
+			],
+			[
+				"ini",
+				"initialiseProgress\tfunction"
+			],
+			[
+				"fi",
+				"FijiWorker\tclass"
+			],
+			[
+				"fiji",
+				"fijiWorker"
+			],
+			[
+				"do",
+				"do_work\tfunction"
+			],
+			[
+				"path_resu",
+				"path_result_raw\tstatement"
+			],
+			[
+				"path_reu",
+				"path_result_from_fiji\tparam"
+			],
+			[
+				"path_result",
+				"path_result_from_fiji\tparam"
+			],
+			[
+				"path_dat",
+				"path_data_for_fiji\tparam"
+			],
+			[
+				"path_re",
+				"path_result_raw"
+			],
+			[
+				"repeat",
+				"repeat_path\tparam"
+			],
+			[
+				"Ex",
+				"except\tkeyword"
+			],
+			[
+				"Ind",
+				"IndexError\tclass"
+			],
+			[
+				"samp",
+				"sample_result"
+			],
+			[
+				"result",
+				"result_path"
+			],
+			[
+				"mask",
+				"mask_rev"
+			],
+			[
+				"thred",
+				"thred_635"
+			],
+			[
+				"res",
+				"results"
+			],
+			[
+				"sampl",
+				"sample_path\tstatement"
+			],
+			[
+				"cal",
+				"calc_intensity\tfunction"
+			],
+			[
+				"sample",
+				"sample_paths\tstatement"
+			],
+			[
+				"masked_",
+				"masked_635\tstatement"
+			],
+			[
+				"paths",
+				"paths_mask\tstatement"
+			],
+			[
+				"well",
+				"well_result\tstatement"
+			],
+			[
+				"We",
+				"WekaSegmentation\tmodule"
+			],
+			[
+				"Weka",
+				"Weka_Segmentation"
+			],
+			[
+				"sa",
+				"saveAs"
+			],
+			[
+				"fil",
+				"file_organizer\tfunction"
+			],
+			[
+				"n",
+				"n_noise_"
+			],
+			[
+				"n_",
+				"n_clusters_"
+			],
+			[
+				"process",
+				"process_folder\tfunction"
+			],
+			[
+				"from",
+				"from_dict\tfunction"
+			],
+			[
+				"ave",
+				"ave_img"
+			],
+			[
+				"iono",
+				"ionomycinMean"
+			],
+			[
+				"fiel",
+				"fieldNames"
+			],
+			[
+				"cic",
+				"circleDirName"
+			],
+			[
+				"time",
+				"timeUsed"
+			],
+			[
+				"error",
+				"error_count"
+			],
+			[
+				"Perc",
+				"PercInflux"
+			],
+			[
+				"Per",
+				"PercInflux"
+			],
+			[
+				"df",
+				"df_path\tparam"
+			],
+			[
+				"te",
+				"temp_file_list\tstatement"
+			],
+			[
+				"ij",
+				"ijCalc\tfunction"
+			],
+			[
+				"su",
+				"subsec_3"
+			],
+			[
+				"in",
+				"insert_command_1"
+			],
+			[
+				"No",
+				"NoEscape\tmodule"
+			],
+			[
+				"sub",
+				"subsec_2"
+			],
+			[
+				"virus",
+				"virus_cov_plot"
+			],
+			[
+				"dic",
+				"dictionary\tparam"
+			],
+			[
+				"rea",
+				"readlines\tfunction"
+			],
+			[
+				"a",
+				"abspath\tfunction"
+			],
+			[
+				"img_",
+				"img_min\tstatement"
+			],
+			[
+				"anti",
+				"antiBody\tstatement"
+			],
+			[
+				"peak",
+				"peak_locating\tfunction"
+			],
+			[
+				"np",
+				"np"
+			],
+			[
+				"field",
+				"fieldOutput\tstatement"
+			],
+			[
+				"r",
+				"r"
+			],
+			[
+				"local",
+				"local_tools\tmodule"
+			],
+			[
+				"wr",
+				"write\tfunction"
+			]
+		]
+	},
+	"buffers":
+	[
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"ins",
+				"Package Control: Install Package"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"package",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": true,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/D/Work/Supres_test/Sample_2021-10-13_12-55-16_GDSC SMLM 1/raw/gdsc.smlm.settings.xml",
+		"/D/Clouds/OneDrive - University of Cambridge/for jeff/File import format for SR/ThunderSTORM data example/cell3 aetemisia dna paint microtubule drifted.csv",
+		"/G/Workspace_Emre_20210904/CoincidenceAnalysis_ComDet_apoE/CoincidenceAnalysis.py",
+		"/D/Work/DiffractionLimitedAnalysis/logics.py",
+		"/G/Workspace_Emre_20210904/CoincidenceAnalysis_ComDet_apoE/fiji_macro.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CoincidenceAnalysis_ComDet_apoE/fiji_macro.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CoincidenceAnalysis_ComDet_apoE/CoincidenceAnalysis.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CoincidenceAnalysis/CoincidenceAnalysis.py",
+		"/D/Work/DiffractionLimitedAnalysis/SR_toolkit-master/SR_toolkit_lib.py",
+		"/D/Work/DiffractionLimitedAnalysis/SR_toolkit-master/installer.py",
+		"/D/Work/DiffractionLimitedAnalysis/SR_toolkit-master/SR_toolkit/SR_toolkit_lib.py",
+		"/D/Work/DiffractionLimitedAnalysis/SR_toolkit-master/SR_toolkit/SR_fit_lib.py",
+		"/C/Users/zjxia/Downloads/logics.py",
+		"/C/Users/zjxia/Downloads/logics.txt",
+		"/D/Work/DiffractionLimitedAnalysis/SR_toolkit-master/README.md",
+		"/D/Work/DiffractionLimitedAnalysis/SR_toolkit-master/SR_toolkit_v3.py",
+		"/D/Work/DiffractionLimitedAnalysis/main.py",
+		"/D/Work/DiffractionLimitedAnalysis/toolbox.py",
+		"/D/Work/DiffractionLimitedAnalysis/SR_toolkit-master/SR_toolkit/gaussmodel2dwxy.m",
+		"/D/Work/DiffractionLimitedAnalysis/SR_toolkit-master/installer.exe",
+		"/D/Work/DiffractionLimitedAnalysis/setup_conda_env.bat",
+		"/D/Work/DiffractionLimitedAnalysis/README.md",
+		"/D/Work/DiffractionLimitedAnalysis/UI_form/DLA.pyproject.user",
+		"/D/Work/DiffractionLimitedAnalysis/UI_form/DiffractionLimitedAnalysis.ui",
+		"/D/Work/DiffractionLimitedAnalysis/UI_form/MainWindow.ui",
+		"/D/Clouds/OneDrive - University of Cambridge/Group_web/HTML_Scraping.py",
+		"/D/Work/workspace_liposomeAssay/main_v1.py",
+		"/D/Work/DLA_test/aggregate_profiling_v3_Trevor.py",
+		"/D/Work/DLA_test/test.py",
+		"/D/Work/DLA_test/fiji_macro_v2.py",
+		"/C/Users/zjxia/Documents/WeChat Files/ttkx1216/FileStorage/File/2021-05/aggregate_profiling_v2_Trevor.py",
+		"/D/Work/DiffractionLimitedAnalysis/setup_conda_env.cmd",
+		"/D/Work/DiffractionLimitedAnalysis/UI_form/OrthogonalAnalysisPopup.ui",
+		"/D/Work/DiffractionLimitedAnalysis/notebooks/particle_locating_function_Trevor.py",
+		"/D/Work/DiffractionLimitedAnalysis/UI_form/GroupingPopup.ui",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CoincidenceAnalysis_ComDet_apoE/test.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CoincidenceAnalysis_ComDet_apoE/develop_log.md",
+		"/C/Users/zjxia/Desktop/particle_locating_function_Trevor.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CellAnalysis/CellAnalysis_v0.2/fiji_classify.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CellAnalysis/CellAnalysis_v0.2/fiji_avg.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CellAnalysis/CellAnalysis_v0.1/main_v0.1.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CellAnalysis/CellAnalysis_v0.1/fiji_macro.py",
+		"/D/Work/DiffractionLimitedAnalysis/UI_form/data_tagging_sample.csv",
+		"/C/Users/zjxia/Desktop/particle_locating_function_example.py",
+		"/D/Work/DiffractionLimitedAnalysis/fiji_macro_v2.py",
+		"/D/Work/DiffractionLimitedAnalysis/form.ui",
+		"/D/Work/workspace_20210412_jeff/fiji_macro.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CalciumInfluxAssay/CalciumInfluxAssay_v2.0/cia_tools_v2.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CalciumInfluxAssay/CalciumInfluxAssay_v2.0/fiji_macro.py",
+		"/D/Work/liposomeAssay/main_v1.py",
+		"/D/Work/workspace_20210408_AZMeeting/liposomeAssay/main_v1.py",
+		"/C/Users/zjxia/Desktop/Micro-Manager 1.4.bat",
+		"/D/Work/workspace_20210221_Coincidence/fiji_macro_v2.py",
+		"/D/Work/DiffractionLimitedAnalysis/CustomWidgets.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CalciumInfluxAssay/CalciumInfluxAssay_v1.0/main_v1.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CalciumInfluxAssay/CalciumInfluxAssay_v2.0/main_v2.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CalciumInfluxAssay/CalciumInfluxAssay_v2.1/cia_tools_v2.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CalciumInfluxAssay/CalciumInfluxAssay_v2.1/main_v2.py",
+		"/D/Work/workspace_20210329_Pavan/Repeat1.ipynb",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/SimPullAnalysis/update_log.md",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/SimPullAnalysis/main_v0.2.py",
+		"/D/Work/workspace_20210316/SimPullAnalysis_UI/README.md",
+		"/D/Work/workspace_20210316/SimPullAnalysis_UI/main.py",
+		"/D/Work/workspace_20210316/SimPullAnalysis_UI/fiji_macro_v2.py",
+		"/D/Work/workspace_20210316/SimPullAnalysis_UI/logics.py",
+		"/D/Work/workspace_20210316/SimPullAnalysis_UI/Fiji.app/jars/jython-slim-2.7.2.jar",
+		"/D/Work/workspace_20210316/SimPullAnalysis_UI/Fiji.app/WELCOME.md",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/Ancient_codes/Calcium_Influx/autonudger1_test.py",
+		"/C/Users/zjxia/Downloads/pyqtgraph-master/pyqtgraph-master/README.md",
+		"/C/Users/zjxia/Downloads/pyqtgraph-master/pyqtgraph-master/setup.py",
+		"/D/Work/workspace_20210316/SimPullAnalysis_UI/form.ui",
+		"/D/Work/workspace_20210310/SimPullAnalysis_v2.0/fiji_macro_v2.py",
+		"/D/Work/workspace_20210221/fiji_macro_v2.py",
+		"/D/Work/workspace_20210221/fiji_macro.py",
+		"/D/Work/workspace_20210221/Trials/20210228_173028/sample_ids.json",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/AutoDL_Colocalisation/dl_main.py",
+		"/D/Work/workspace_20210221/CoincidenceAnalysis_ComDet/CoincidenceAnalysis.py",
+		"/C/Users/zjxia/Downloads/data/residuals.tsv",
+		"/D/Work/workspace_20210221/Trials/20210228_172437/sample_ids.json",
+		"/D/Work/workspace_20210221/CoincidenceAnalysis_ComDet/fiji_macro.py",
+		"/D/Work/workspace_20210228_jeff/CoincidenceAnalysis_ComDet_apoE/fiji_macro.py",
+		"/D/Work/workspace_20210228_jeff/CoincidenceAnalysis_ComDet_apoE/CoincidenceAnalysis.py",
+		"/D/Work/workspace_20210221/dataset.json",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CalciumInfluxAssay/CalciumInfluxAssay_v1.0/local_tools_v1.py",
+		"/D/Work/workspace_20210221/samples.json",
+		"/D/Work/BeforeWashing-20210203T165155Z-001/BeforeWashing/derya_v1.1.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CoincidenceAnalysis/fiji_macro.py",
+		"/D/Work/BeforeWashing-20210203T165155Z-001/BeforeWashing/derya.py",
+		"/D/Work/BeforeWashing-20210203T165155Z-001/derya.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CalciumInfluxAssay/CalciumInfluxAssay_v2.1/fiji_macro.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CoincidenceAnalysis_ComDet/develop_log.md",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CellAnalysis/CellAnalysis_v0.2/main_v0.2.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/SimPullAnalysis/main_v0.1.py",
+		"/D/Work/AutoDL_Colocalisation/dl_main.py",
+		"/D/Work/CellAnalysis_v0.2/main_v0.2.py",
+		"/D/Work/CellAnalysis_v0.1/main_v0.1.py",
+		"/D/Work/CellAnalysis_v0.1/fiji_macro.py",
+		"/D/Clouds/OneDrive - University of Cambridge/ziwei_20201209/file_manager.bat",
+		"/D/Work/ziwei_20201209/fiji_macro.py",
+		"/D/Work/ziwei_20201209/main.py",
+		"/D/Clouds/OneDrive - University of Cambridge/ziwei_20201209/fiji_macro.py",
+		"/D/Clouds/OneDrive - University of Cambridge/ziwei_20201209/main.py",
+		"/D/Work/ziwei/fiji_macro.py",
+		"/D/Work/ziwei/main.py",
+		"/D/Work/CellAnalysis_v0.2/fiji_avg.py",
+		"/D/Work/CellAnalysis_v0.2/fiji_classify.py",
+		"/D/Work/CellAnalysis_v0.2/fiji_average.py",
+		"/D/Work/AutoDL_Colocalisation/fiji_avg.py",
+		"/D/Work/CellAnalysis_v0.2/fiji_macro.py",
+		"/D/Work/CellAnalysis_plan1/fiji_macro.py",
+		"/D/Work/CellAnalysis_plan1/main_v0.1.py",
+		"/D/Work/CellAnalysis/main_v0.1.py",
+		"/D/Work/CellAnalysis/fiji_macro.py",
+		"/D/Work/CellAnalysis/data.arff",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CoincidenceAnalysis_ComDet/CoincidenceAnalysis.py",
+		"/D/Work/SimPullAnalysis/main_v0.1.py",
+		"/D/Work/CalciumInfluxAssay_v1.0/local_tools_v1.py",
+		"/D/Work/CalciumInfluxAssay_v1.0/main_v1.py",
+		"/D/Work/CalciumInfluxAssay_v2.0/main_v2.py",
+		"/D/Work/CalciumInfluxAssay_v2.0/cia_tools_v2.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Projects/Checkpoint_20201007/zx02/zx02_20191120_4wells_drift_test/align.py",
+		"/D/Work/CalciumInfluxAssay_v1.0/README_v1.md",
+		"/D/Clouds/OneDrive - University of Cambridge/Projects/Checkpoint_20201007/zx99/zx99_MPACode_20190527/WindowsVersion/local_tools.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Projects/Checkpoint_20201007/zx99/zx99_MPACode_20190527/autonudger1_test.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CalciumInfluxAssay/main_v1.py",
+		"/D/Clouds/OneDrive - University of Cambridge/Github/CalciumInfluxAssay/local_tools_v1.py",
+		"/D/Work/CalciumInfluxAssay_v2.1/main_v2.py",
+		"/D/Work/CalciumInfluxAssay_v2.1/cia_tools_v2.py"
+	],
+	"find":
+	{
+		"height": 39.0
+	},
+	"find_in_files":
+	{
+		"height": 101.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"scrollbar_highlights": true,
+		"show_context": true,
+		"use_buffer2": true,
+		"use_gitignore": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 27.0
+	},
+	"input":
+	{
+		"height": 39.2000007629
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "Peakfit_GDSC_SMLM.sublime-project",
+	"replace":
+	{
+		"height": 50.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 275.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
