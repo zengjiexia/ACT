@@ -75,6 +75,7 @@ class MainWindow(QMainWindow):
         self.window.SupRes_FidCorrMethodSelector.currentIndexChanged.connect(self._methodOptSRFidCorr)
         self.window.SupRes_loadButton.clicked.connect(self.clickLoadSRPreviousAttempts)
         self.window.SupRes_previousAttemptSelector.currentIndexChanged.connect(self._SRPreviousAttemptSelected)
+        self.window.SupRes_runFidCorrButton.clicked.connect(self.clickSRfidCorr)
 
         ui_file.close()
         if not self.window:
@@ -467,22 +468,22 @@ class MainWindow(QMainWindow):
             self.showMessage('w', 'Path to folder not found.')
             return 0
         else:
-            self.data_path = data_path
+            self.data_path = data_path.replace('\\', '/')
             self.window.SupRes_pathEntry.setText(self.data_path)
-            self.updateLog('Loading previous attempts from ' + data_path)
+            self.updateLog('Loading previous attempts from ' + self.data_path)
 
-        if self.data_path.endswith('\\'):
+        if self.data_path.endswith('/'):
             self.data_path = self.data_path[:-1]
 
         previous_attempts = os.listdir(os.path.dirname(self.data_path))
         previous_attempts.remove(os.path.basename(self.data_path))
-        self.updateLog(str(len(previous_attempts)) + ' previous attempts was/were found.')
+        self.updateLog(str(len(previous_attempts)) + ' previous attempts were found.')
         self.previous_attempts = dict()
         if len(previous_attempts) != 0:
             self.window.SupRes_previousAttemptSelector.clear()
             self.window.SupRes_previousAttemptSelector.addItem("New")
             for i in previous_attempts:
-                self.previous_attempts[i] = os.path.join(os.path.dirname(self.data_path), i)
+                self.previous_attempts[i] = os.path.join(os.path.dirname(self.data_path), i).replace('\\', '/')
                 self.window.SupRes_previousAttemptSelector.addItem(i)
 
 
@@ -571,18 +572,30 @@ class MainWindow(QMainWindow):
             if self.window.SupRes_FidCorrMethodSelector.currentText() == 'Auto fiducial':
                 self.window.SupRes_FidCorrParaLabel1.setText('Brightness')
                 self.window.SupRes_FidCorrParaLabel2.setText('Last Time/frames')
+                self.window.SupRes_FidCorrParaEntry1.setText('10000')
+                self.window.SupRes_FidCorrParaEntry2.setText('500')
             elif self.window.SupRes_FidCorrMethodSelector.currentText() == 'Fiducial marker':
                 self.window.SupRes_FidCorrParaLabel1.setText('Max distance/nm')
                 self.window.SupRes_FidCorrParaLabel2.setText('Min visibility ratio')
+                self.window.SupRes_FidCorrParaEntry1.setText('40.0')
+                self.window.SupRes_FidCorrParaEntry2.setText('0.1')
             elif self.window.SupRes_FidCorrMethodSelector.currentText() == 'Cross-correlation - ThunderSTORM':
                 self.window.SupRes_FidCorrParaLabel1.setText('Bin size')
                 self.window.SupRes_FidCorrParaLabel2.setText('Magnification')
+                self.window.SupRes_FidCorrParaEntry1.setText('10')
+                self.window.SupRes_FidCorrParaEntry2.setText('5.0')
 
 
     def clickSRRun(self):
         guard = self._checkSRParameters()
         if guard == 1:
             guard = self._runSRReconstruction()
+
+
+    def clickSRfidCorr(self):
+        guard = self._checkSRParameters()
+        if guard == 1:
+            guard = self._runSRFidCorr()
 
 
     def _checkSRParameters(self):
@@ -592,9 +605,9 @@ class MainWindow(QMainWindow):
             self.showMessage('w', 'Path to folder not found.')
             return 0
         else:
-            self.data_path = data_path
+            self.data_path = data_path.replace('\\', '/')
             self.window.SupRes_pathEntry.setText(self.data_path)
-            self.updateLog('Data path set to ' + data_path)
+            self.updateLog('Data path set to ' + self.data_path)
 
         try: # Obtain parameters from UI
             self.SRparameters = {
@@ -614,14 +627,14 @@ class MainWindow(QMainWindow):
                 self.SRparameters['quantum_efficiency'] = float(self.window.SupRes_QEEntry.text())
 
             if self.SRparameters['fid_method'] == 'Auto fiducial':
-                self.SRparameters['fid_brightness'] = float(self.window.SupRes_FidCorrEntry1.text())
-                self.SRparameters['fid_time'] = float(self.window.SupRes_FidCorrEntry2.text())
+                self.SRparameters['fid_brightness'] = float(self.window.SupRes_FidCorrParaEntry1.text())
+                self.SRparameters['fid_time'] = float(self.window.SupRes_FidCorrParaEntry2.text())
             elif self.SRparameters['fid_method'] == 'Fiducial marker':
-                self.SRparameters['max_distance'] = float(self.window.SupRes_FidCorrEntry1.text())
-                self.SRparameters['min_visibility'] = float(self.window.SupRes_FidCorrEntry2.text())
+                self.SRparameters['max_distance'] = float(self.window.SupRes_FidCorrParaEntry1.text())
+                self.SRparameters['min_visibility'] = float(self.window.SupRes_FidCorrParaEntry2.text())
             elif self.SRparameters['fid_method'] == 'Cross-correlation - ThunderSTORM':
-                self.SRparameters['bin_size'] = float(self.window.SupRes_FidCorrEntry1.text())
-                self.SRparameters['magnification'] = float(self.window.SupRes_FidCorrEntry2.text())
+                self.SRparameters['bin_size'] = int(self.window.SupRes_FidCorrParaEntry1.text())
+                self.SRparameters['magnification'] = float(self.window.SupRes_FidCorrParaEntry2.text())
             else:
                 pass
 
@@ -629,14 +642,21 @@ class MainWindow(QMainWindow):
             self.showMessage('w', 'The parameters must be numbers.')
             return 0
 
-        self.project = SuperResAnalysis(self.data_path, self.SRparameters) # Create project for super resolution analysis
-        if self.project.error != 1:
-            self.showMessage('c', self.project.error)
-            return 0
-        else:
-            with open(os.path.join(self.project.path_result_main, 'parameters.txt'), 'w') as js_file:
-                json.dump(self.SRparameters, js_file)
+        selected_attempt = self.window.SupRes_previousAttemptSelector.currentText()
+        if selected_attempt != "New":
+            self.project = SuperResAnalysis(self.data_path, self.SRparameters) # Create project for super resolution analysis
+            self.project.path_result_main = self.previous_attempts[selected_attempt]
+            self.project.path_result_raw = self.project.path_result_main + '/raw'
             return 1
+        else:# Working...
+            self.project = SuperResAnalysis(self.data_path, self.SRparameters) # Create project for super resolution analysis
+            if self.project.error != 1:
+                self.showMessage('c', self.project.error)
+                return 0
+            else:
+                with open(os.path.join(self.project.path_result_main, 'parameters.txt'), 'w') as js_file:
+                    json.dump(self.SRparameters, js_file)
+                return 1
 
 
     def _runSRReconstruction(self):
@@ -672,6 +692,8 @@ class MainWindow(QMainWindow):
         self.SRThread.finished.connect(
             lambda: self.window.SupRes_runFidCorrButton.setEnabled(True) # Enable 'Run fiducial correction' button
             )
+
+        # Passing next job
         self.SRThread.finished.connect(
             lambda: self.updateLog('Reconstruction completed.')
             )
@@ -710,10 +732,19 @@ class MainWindow(QMainWindow):
         self.updateLog('Starting drift correction by ' + self.SRparameters['fid_method'] + '...')
         
         # UI response
-        self.window.SupRes_runAnalysisButton.setEnabled(False) # Block 'Run' button
+        self.window.SupRes_runReconstructionButton.setEnabled(False) # Block 'Run Reconstruction' button
         self.SRThread.finished.connect(
-            lambda: self.window.SupRes_runAnalysisButton.setEnabled(True) # Reset 'Run' button
+            lambda: self.window.SupRes_runReconstructionButton.setEnabled(True) # Reset 'Run Reconstruction' button
             )
+        self.window.SupRes_loadButton.setEnabled(False) # Block 'Load' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_loadButton.setEnabled(True) # Reset 'Load' button
+            )
+        self.window.SupRes_runFidCorrButton.setEnabled(False) # Block 'Run Fiducial Correction' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runFidCorrButton.setEnabled(True) # Reset 'Fiducial Correction' button
+            )
+        # Passing next job
         self.SRThread.finished.connect(
             lambda: self.updateLog('Drift correction completed.')
             )

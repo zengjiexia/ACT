@@ -368,7 +368,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>D:\Work\SupRes_test\Sample</string>
+       <string>D:\Work\Fid_test\Sample</string>
       </property>
      </widget>
      <widget class="QLabel" name="SupRes_pathLabel">
@@ -686,7 +686,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QPushButton" name="SupRes_runAnalysisButton">
+     <widget class="QPushButton" name="SupRes_runReconstructionButton">
       <property name="geometry">
        <rect>
         <x>650</x>
@@ -857,15 +857,15 @@
        <string>Previous attempts</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="pushButton">
+     <widget class="QPushButton" name="SupRes_runFidCorrButton">
       <property name="enabled">
        <bool>false</bool>
       </property>
       <property name="geometry">
        <rect>
-        <x>514</x>
+        <x>504</x>
         <y>260</y>
-        <width>121</width>
+        <width>131</width>
         <height>25</height>
        </rect>
       </property>

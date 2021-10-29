@@ -693,17 +693,7 @@ class SuperResAnalysis:
         self.path_program = os.path.dirname(__file__)
         self.path_data_main = data_path
         self.parameters = parameters
-
-        if self.gather_project_info() == 1:
-            # Construct dirs for results
-            self.timeStamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-            self.path_result_main = self.path_data_main + '_' + self.timeStamp + '_' + self.parameters['method']
-            if os.path.isdir(self.path_result_main) != 1:
-                os.mkdir(self.path_result_main)
-            self.path_result_raw = os.path.join(self.path_result_main, 'raw')
-            if os.path.isdir(self.path_result_raw) != 1:
-                os.mkdir(self.path_result_raw)
-
+        self.gather_project_info()
 
     def gather_project_info(self):
 
@@ -728,7 +718,8 @@ class SuperResAnalysis:
                 self.wells[fov[:4]] = [fov]
 
         # Check if the images are stacks
-        test_img = io.imread(list(self.fov_paths.values())[0])
+        #test_img = io.imread(list(self.fov_paths.values())[0])
+        test_img = np.array(list(self.fov_paths.values())[0])
         if len(test_img.shape) != 3: 
             self.error = 'The images are not stacked. Please check.'
             return 0
@@ -740,15 +731,14 @@ class SuperResAnalysis:
 
 
     def _compose_fiji_macro(self, field_name):
-        path_result_raw_for_macro = self.path_result_raw.replace('\\', '/') # the \ does not work in fiji script, replace with /.
         if self.parameters['method'] == 'GDSC SMLM 1':
             self.macro = """
-            run("Peak Fit", "template=[None] config_file=["""+path_result_raw_for_macro + '/gdsc.smlm.settings.xml' +"""] calibration="""+str(self.parameters['pixel_size'])+""" gain="""+str(self.parameters['camera_gain'])+""" exposure_time="""+str(self.parameters['exposure_time'])+""" initial_stddev0=2.000 initial_stddev1=2.000 initial_angle=0.000 smoothing=0.50 smoothing2=3 search_width=3 fit_solver=[Least Squares Estimator (LSE)] fit_function=Circular local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 fail_limit=10 include_neighbours neighbour_height=0.30 residuals_threshold=1 duplicate_distance=0.50 shift_factor=2 signal_strength="""+str(self.parameters['signal_strength'])+""" width_factor=2 precision="""+str(self.parameters['precision'])+""" min_photons="""+str(self.parameters['min_photons'])+""" results_table=Uncalibrated image=[Localisations (width=precision)] weighted equalised image_precision=5 image_scale="""+str(self.parameters['scale'])+""" results_dir=["""+path_result_raw_for_macro+"""] local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 stack");
+            run("Peak Fit", "template=[None] config_file=["""+self.path_result_raw + '/gdsc.smlm.settings.xml' +"""] calibration="""+str(self.parameters['pixel_size'])+""" gain="""+str(self.parameters['camera_gain'])+""" exposure_time="""+str(self.parameters['exposure_time'])+""" initial_stddev0=2.000 initial_stddev1=2.000 initial_angle=0.000 smoothing=0.50 smoothing2=3 search_width=3 fit_solver=[Least Squares Estimator (LSE)] fit_function=Circular local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 fail_limit=10 include_neighbours neighbour_height=0.30 residuals_threshold=1 duplicate_distance=0.50 shift_factor=2 signal_strength="""+str(self.parameters['signal_strength'])+""" width_factor=2 precision="""+str(self.parameters['precision'])+""" min_photons="""+str(self.parameters['min_photons'])+""" results_table=Uncalibrated image=[Localisations (width=precision)] weighted equalised image_precision=5 image_scale="""+str(self.parameters['scale'])+""" results_dir=["""+self.path_result_raw+"""] local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 stack");
             selectWindow(\""""+field_name+""" (LSE) SuperRes\");
-            saveAs("tif", \""""+path_result_raw_for_macro + '/SR_' + field_name+""".tif\");
+            saveAs("tif", \""""+self.path_result_raw + '/SR_' + field_name+""".tif\");
             close(\"SR_"""+field_name+""".tif\");
             selectWindow("Fit Results");
-            saveAs("Results", \""""+path_result_raw_for_macro + '/' + field_name+"""_results.csv\");
+            saveAs("Results", \""""+self.path_result_raw + '/' + field_name+"""_results.csv\");
             close("Fit Results");
             close("Log");
             close(\""""+field_name+"""\");
@@ -757,15 +747,24 @@ class SuperResAnalysis:
             self.macro = """
             run("Camera setup", "offset="""+str(self.parameters['camera_bias'])+""" quantumefficiency="""+str(self.parameters['quantum_efficiency'])+""" isemgain=true photons2adu=3.6 gainem="""+str(self.parameters['camera_gain'])+""" pixelsize="""+str(self.parameters['pixel_size'])+"""");
             run("Run analysis", "filter=[Wavelet filter (B-Spline)] scale=2.0 order=3 detector=[Local maximum] connectivity=8-neighbourhood threshold=std(Wave.F1) estimator=[PSF: Integrated Gaussian] sigma=1.6 fitradius=3 method=[Weighted Least squares] full_image_fitting=false mfaenabled=false renderer=[Averaged shifted histograms] magnification="""+str(self.parameters['scale'])+""" colorize=false threed=false shifts=2 repaint="""+str(int(self.parameters['exposure_time']))+"""");
-            run("Export results", "floatprecision=5 filepath="""+path_result_raw_for_macro + '/' + field_name+"""_results.csv fileformat=[CSV (comma separated)] sigma=true intensity=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
+            run("Export results", "floatprecision=5 filepath="""+self.path_result_raw + '/' + field_name+"""_results.csv fileformat=[CSV (comma separated)] sigma=true intensity=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
             selectWindow('Averaged shifted histograms');
-            saveAs("tif", \""""+path_result_raw_for_macro + '/SR_' + field_name+""".tif\");
+            saveAs("tif", \""""+self.path_result_raw + '/SR_' + field_name+""".tif\");
             close(\"SR_"""+field_name+""".tif\");
             close(\""""+field_name+"""\");
             """
         
 
     def superRes_reconstruction(self, progress_signal=None, IJ=None):
+
+        # Construct dirs for results
+        self.timeStamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        self.path_result_main = self.path_data_main + '_' + self.timeStamp + '_' + self.parameters['method']
+        if os.path.isdir(self.path_result_main) != 1:
+            os.mkdir(self.path_result_main)
+        self.path_result_raw = os.path.join(self.path_result_main, 'raw')
+        if os.path.isdir(self.path_result_raw) != 1:
+            os.mkdir(self.path_result_raw)
 
         if progress_signal == None: #i.e. running in non-GUI mode
             path_fiji = os.path.join(self.path_program, 'Fiji.app')
@@ -794,6 +793,38 @@ class SuperResAnalysis:
         return 1
 
 
+    def _fidCorr_TS_FiducialMarkers(self, field_name):
+        if self.parameters['method'] == 'ThunderSTORM':
+            self.macro = """
+            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Show results table", "action=drift smoothingbandwidth=0.25 method=[Fiducial markers] ontimeratio="""+str(self.parameters['min_visibility'])+""" distancethr="""+str(self.parameters['max_distance'])+""" save=false");
+            run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
+            selectWindow("Averaged shifted histograms");
+            saveAs("tif", \""""+self.path_result_fid+"/SR_"+field_name+"""_corrected.tif\");
+            close(\"SR_"""+field_name+"""_corrected.tif\");
+            selectWindow("Drift");
+            saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
+            close(\""""+field_name+"""_drift.tif\");
+            """
+            # working...
+
+
+    def _fidCorr_TS_CrossCorrelation(self, field_name):
+        if self.parameters['method'] == 'ThunderSTORM':
+            self.macro = """
+            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Show results table", "action=drift magnification="""+str(self.parameters['magnification'])+""" method=[Cross correlation] ccsmoothingbandwidth=0.25 save=false steps="""+str(self.parameters['bin_size'])+""" showcorrelations=false");
+            run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
+            selectWindow("Averaged shifted histograms");
+            saveAs("tif", \""""+self.path_result_fid+"/SR_"+field_name+"""_corrected.tif\");
+            close(\"SR_"""+field_name+"""_corrected.tif\");
+            selectWindow("Drift");
+            saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
+            close(\""""+field_name+"""_drift.tif\");
+            """
+            # working...
+
+
     def superRes_fiducialCorrection(self, progress_signal=None, IJ=None):
         if progress_signal == None: #i.e. running in non-GUI mode
             path_fiji = os.path.join(self.path_program, 'Fiji.app')
@@ -803,7 +834,33 @@ class SuperResAnalysis:
         else:
             workload = sorted(self.fov_paths)
             c = 0 # progress indicator
+
+        for field in workload:
+            imgFile = self.fov_paths[field]
+             
             # working...
+            if self.parameters['fid_method'] == 'Fiducial marker':
+                self.path_result_fid = self.path_result_main + "/ThunderSTORM_FidMarker_" + str(self.parameters['max_distance']) + "_" + str(self.parameters['min_visibility'])
+                if os.path.isdir(self.path_result_fid) != 1:
+                    os.mkdir(self.path_result_fid)
+
+                self._fidCorr_TS_FiducialMarkers(field)
+                IJ.py.run_macro(self.macro)
+            elif self.parameters['fid_method'] == 'Cross-correlation - ThunderSTORM':
+                self.path_result_fid = self.path_result_main + "/ThunderSTORM_CrossCorrelation_" + str(self.parameters['bin_size']) + "_" + str(self.parameters['magnification'])
+                if os.path.isdir(self.path_result_fid) != 1:
+                    os.mkdir(self.path_result_fid)
+
+                self._fidCorr_TS_CrossCorrelation(field)
+                IJ.py.run_macro(self.macro)
+
+
+            if progress_signal == None:
+                pass
+            else:
+                c += 1
+                progress_signal.emit(c)
+        return 1
 
 
 
