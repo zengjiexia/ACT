@@ -24,6 +24,7 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         self.loadUI()
 
+
     def loadUI(self):
 
         path = os.path.join(os.path.dirname(__file__), "UI_form/MainWindow.ui")

@@ -137,11 +137,15 @@ class SimPullAnalysis:
                 IJ.py.run_macro(macro)
 
             # Remove edge particles
-            df = pd.read_csv(saveto+'_results.csv')
-            df = df.loc[(df['X_(px)'] >= 30) & (df['X_(px)'] <= 480)]
-            df = df.loc[(df['Y_(px)'] >= 30) & (df['Y_(px)'] <= 480)]
-            df = df.reset_index(drop=True)
-            df.to_csv(saveto+'_results.csv')
+            try:
+                df = pd.read_csv(saveto+'_results.csv')
+            except pd.errors.EmptyDataError:
+               print('No spot found in FoV: ' + field)
+            else:
+                df = df.loc[(df['X_(px)'] >= 30) & (df['X_(px)'] <= 480)]
+                df = df.loc[(df['Y_(px)'] >= 30) & (df['Y_(px)'] <= 480)]
+                df = df.reset_index(drop=True)
+                df.to_csv(saveto+'_results.csv')
 
             if progress_signal == None:
                 pass
@@ -694,6 +698,7 @@ class SuperResAnalysis:
         self.path_data_main = data_path
         self.parameters = parameters
         self.gather_project_info()
+
 
     def gather_project_info(self):
 
