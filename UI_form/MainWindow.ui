@@ -741,10 +741,16 @@
        <item>
         <widget class="QComboBox" name="SupRes_FidCorrMethodSelector">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>193</width>
+           <height>0</height>
+          </size>
          </property>
          <item>
           <property name="text">
@@ -754,16 +760,6 @@
          <item>
           <property name="text">
            <string>Auto fiducial</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Fiducial marker</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Cross-correlation - ThunderSTORM</string>
           </property>
          </item>
         </widget>

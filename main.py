@@ -521,7 +521,7 @@ class MainWindow(QMainWindow):
         if self.SRparameters['fid_method'] == 'Auto fiducial':
             self.window.SupRes_FidCorrEntry1.setText(str(self.SRparameters['fid_brightness']))
             self.window.SupRes_FidCorrEntry2.setText(str(self.SRparameters['fid_time']))
-        elif self.SRparameters['fid_method'] == 'Fiducial marker':
+        elif self.SRparameters['fid_method'] == 'Fiducial marker - ThunderSTORM':
             self.window.SupRes_FidCorrEntry1.setText(str(self.SRparameters['max_distance']))
             self.window.SupRes_FidCorrEntry2.setText(str(self.SRparameters['min_visibility']))
         elif self.SRparameters['fid_method'] == 'Cross-correlation - ThunderSTORM':
@@ -536,23 +536,25 @@ class MainWindow(QMainWindow):
 
     def _methodOptSR(self):
         """
-        Block/Release parameter entry when a method is selected.
+        Block/Release parameter entry when a method is selected
+        Change the options for fiducial correction for different reconstruction method
         """
-        GDSC_only_fid_corr_methods = ['Auto fiducial'] # The methods listed will be deleted when ThunderSTROM is selected
+        GDSC_fid_corr_methods = [' ', 'Auto fiducial'] # The methods listed will be deleted when ThunderSTROM is selected
+        ThunderSTORM_fid_corr_methods = [' ', 'Fiducial marker - ThunderSTORM', 'Cross-correlation - ThunderSTORM']
+
         if self.window.SupRes_methodSelector.currentText() == 'GDSC SMLM 1':
             self.window.SupRes_QELabel.setEnabled(False)
             self.window.SupRes_QEEntry.setEnabled(False)
-            for i in GDSC_only_fid_corr_methods:
-                if self.window.SupRes_FidCorrMethodSelector.findText(i) == -1:
-                    self.window.SupRes_FidCorrMethodSelector.addItem(i)
+            self.window.SupRes_FidCorrMethodSelector.clear()
+            for i in GDSC_fid_corr_methods:
+                self.window.SupRes_FidCorrMethodSelector.addItem(i)
 
         elif self.window.SupRes_methodSelector.currentText() == 'ThunderSTORM':
             self.window.SupRes_QELabel.setEnabled(True)
             self.window.SupRes_QEEntry.setEnabled(True)
-            for i in GDSC_only_fid_corr_methods:
-                ind = self.window.SupRes_FidCorrMethodSelector.findText(i)
-                if ind != -1:
-                    self.window.SupRes_FidCorrMethodSelector.removeItem(ind)
+            self.window.SupRes_FidCorrMethodSelector.clear()
+            for i in ThunderSTORM_fid_corr_methods:
+                self.window.SupRes_FidCorrMethodSelector.addItem(i)
 
 
     def _methodOptSRFidCorr(self):
@@ -570,12 +572,13 @@ class MainWindow(QMainWindow):
             self.window.SupRes_FidCorrParaLabel2.setEnabled(True)
             self.window.SupRes_FidCorrParaEntry1.setEnabled(True)
             self.window.SupRes_FidCorrParaEntry2.setEnabled(True)
+
             if self.window.SupRes_FidCorrMethodSelector.currentText() == 'Auto fiducial':
                 self.window.SupRes_FidCorrParaLabel1.setText('Brightness')
                 self.window.SupRes_FidCorrParaLabel2.setText('Last Time/frames')
                 self.window.SupRes_FidCorrParaEntry1.setText('10000')
                 self.window.SupRes_FidCorrParaEntry2.setText('500')
-            elif self.window.SupRes_FidCorrMethodSelector.currentText() == 'Fiducial marker':
+            elif self.window.SupRes_FidCorrMethodSelector.currentText() == 'Fiducial marker - ThunderSTORM':
                 self.window.SupRes_FidCorrParaLabel1.setText('Max distance/nm')
                 self.window.SupRes_FidCorrParaLabel2.setText('Min visibility ratio')
                 self.window.SupRes_FidCorrParaEntry1.setText('40.0')
@@ -630,7 +633,7 @@ class MainWindow(QMainWindow):
             if self.SRparameters['fid_method'] == 'Auto fiducial':
                 self.SRparameters['fid_brightness'] = float(self.window.SupRes_FidCorrParaEntry1.text())
                 self.SRparameters['fid_time'] = float(self.window.SupRes_FidCorrParaEntry2.text())
-            elif self.SRparameters['fid_method'] == 'Fiducial marker':
+            elif self.SRparameters['fid_method'] == 'Fiducial marker - ThunderSTORM':
                 self.SRparameters['max_distance'] = float(self.window.SupRes_FidCorrParaEntry1.text())
                 self.SRparameters['min_visibility'] = float(self.window.SupRes_FidCorrParaEntry2.text())
             elif self.SRparameters['fid_method'] == 'Cross-correlation - ThunderSTORM':

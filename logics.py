@@ -166,7 +166,7 @@ class SimPullAnalysis:
         return 1
 
     
-    def call_Trevor(self, bg_thres = 1, tophat_disk_size=10, progress_signal=None, erode_size = 1):
+    def call_Trevor(self, bg_thres = 1, tophat_disk_size=50, progress_signal=None, erode_size = 1):
         if progress_signal == None: #i.e. running in non-GUI mode
             workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
         else:
@@ -811,7 +811,7 @@ class SuperResAnalysis:
             saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
             close(\""""+field_name+"""_drift.tif\");
             """
-            # working...
+            # working... - compatiblity with data reconstructed by GDSC
 
 
     def _fidCorr_TS_CrossCorrelation(self, field_name):
@@ -827,7 +827,12 @@ class SuperResAnalysis:
             saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
             close(\""""+field_name+"""_drift.tif\");
             """
-            # working...
+            # working... - compatiblity with data reconstructed by GDSC
+
+
+    def _fidCorr_GDSC_autoFid(self, field_name):
+        if self.parameters['method'] == 'GDSC SMLM 1':
+            pass
 
 
     def superRes_fiducialCorrection(self, progress_signal=None, IJ=None):
@@ -844,7 +849,7 @@ class SuperResAnalysis:
             imgFile = self.fov_paths[field]
              
             # working...
-            if self.parameters['fid_method'] == 'Fiducial marker':
+            if self.parameters['fid_method'] == 'Fiducial marker - ThunderSTORM':
                 self.path_result_fid = self.path_result_main + "/ThunderSTORM_FidMarker_" + str(self.parameters['max_distance']) + "_" + str(self.parameters['min_visibility'])
                 if os.path.isdir(self.path_result_fid) != 1:
                     os.mkdir(self.path_result_fid)

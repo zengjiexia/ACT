@@ -74,12 +74,12 @@ class DFLParticleFinder(QObject):
     def run(self):
         if self.algorithm == 'ComDet':
             try:
-                self.project.call_ComDet(self.size, self.threshold, progress_signal=self.progress, IJ=self.IJ)
+                self.project.call_ComDet(size = self.size, threshold = self.threshold, progress_signal=self.progress, IJ=self.IJ)
             except:
                 print(sys.exc_info())
         elif self.algorithm == 'Trevor':
             try:
-                self.project.call_Trevor(self.size, self.threshold, progress_signal=self.progress)
+                self.project.call_Trevor(erode_size = self.size, bg_thres = self.threshold, progress_signal=self.progress)
             except:
                 print(sys.exc_info())
         else:
