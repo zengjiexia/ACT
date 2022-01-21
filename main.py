@@ -652,14 +652,12 @@ class MainWindow(QMainWindow):
             self.project.path_result_main = self.previous_attempts[selected_attempt]
             self.project.path_result_raw = self.project.path_result_main + '/raw'
             return 1
-        else:# Working...
+        else:
             self.project = SuperResAnalysis(self.data_path, self.SRparameters) # Create project for super resolution analysis
             if self.project.error != 1:
                 self.showMessage('c', self.project.error)
                 return 0
             else:
-                with open(os.path.join(self.project.path_result_main, 'parameters.txt'), 'w') as js_file:
-                    json.dump(self.SRparameters, js_file)
                 return 1
 
 

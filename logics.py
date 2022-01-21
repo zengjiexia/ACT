@@ -21,6 +21,7 @@ from pathos.multiprocessing import ProcessingPool as Pool
 from functools import partial
 import psutil
 import scyjava
+import json
 plugins_dir = os.path.join(os.path.dirname(__file__), 'Fiji.app/plugins')
 scyjava.config.add_option(f'-Dplugins.dir={plugins_dir}')
 
@@ -723,8 +724,7 @@ class SuperResAnalysis:
                 self.wells[fov[:4]] = [fov]
 
         # Check if the images are stacks
-        #test_img = io.imread(list(self.fov_paths.values())[0])
-        test_img = np.array(list(self.fov_paths.values())[0])
+        test_img = io.imread(list(self.fov_paths.values())[0])
         if len(test_img.shape) != 3: 
             self.error = 'The images are not stacked. Please check.'
             return 0
@@ -770,6 +770,9 @@ class SuperResAnalysis:
         self.path_result_raw = os.path.join(self.path_result_main, 'raw')
         if os.path.isdir(self.path_result_raw) != 1:
             os.mkdir(self.path_result_raw)
+
+        with open(os.path.join(self.path_result_main, 'parameters.txt'), 'w') as js_file:
+            json.dump(self.parameters, js_file)
 
         if progress_signal == None: #i.e. running in non-GUI mode
             path_fiji = os.path.join(self.path_program, 'Fiji.app')
