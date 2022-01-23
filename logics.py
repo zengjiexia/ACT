@@ -765,9 +765,11 @@ class SuperResAnalysis:
         # Construct dirs for results
         self.timeStamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         self.path_result_main = self.path_data_main + '_' + self.timeStamp + '_' + self.parameters['method']
+        self.path_result_main = self.path_result_main.replace("\\", "/") # fiji only reads path with /
         if os.path.isdir(self.path_result_main) != 1:
             os.mkdir(self.path_result_main)
         self.path_result_raw = os.path.join(self.path_result_main, 'raw')
+        self.path_result_raw = self.path_result_raw.replace("\\", "/")# fiji only reads path with /
         if os.path.isdir(self.path_result_raw) != 1:
             os.mkdir(self.path_result_raw)
 
@@ -785,8 +787,8 @@ class SuperResAnalysis:
 
         for field in workload:
             imgFile = self.fov_paths[field]
-            saveto = os.path.join(self.path_result_raw, field)
-            saveto = saveto.replace("\\", "/")
+            #saveto = os.path.join(self.path_result_raw, field)
+            #saveto = saveto.replace("\\", "/")
             img = IJ.io().open(imgFile)
             IJ.ui().show(field, img)
 
