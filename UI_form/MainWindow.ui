@@ -395,12 +395,12 @@
       </property>
       <item>
        <property name="text">
-        <string>GDSC SMLM 1</string>
+        <string>ThunderSTORM</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>ThunderSTORM</string>
+        <string>GDSC SMLM 1</string>
        </property>
       </item>
      </widget>
@@ -484,7 +484,7 @@
        <item row="1" column="4">
         <widget class="QLabel" name="SupRes_QELabel">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
           <string>Quantum Efficiency</string>
@@ -515,7 +515,7 @@
        <item row="1" column="5">
         <widget class="QLineEdit" name="SupRes_QEEntry">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
           <string>1</string>
@@ -759,7 +759,12 @@
          </item>
          <item>
           <property name="text">
-           <string>Auto fiducial</string>
+           <string>Fiducial marker - ThunderSTORM</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Cross-correlation - ThunderSTORM</string>
           </property>
          </item>
         </widget>

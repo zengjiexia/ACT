@@ -764,8 +764,9 @@ class SuperResAnalysis:
 
         # Construct dirs for results
         self.timeStamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        self.path_result_main = self.path_data_main + '_' + self.timeStamp + '_' + self.parameters['method']
+        self.path_result_main = (self.path_data_main + '_' + self.timeStamp + '_' + self.parameters['method'])
         self.path_result_main = self.path_result_main.replace("\\", "/") # fiji only reads path with /
+        self.path_result_main = self.path_result_main.replace(" ", "_") # fiji only reads path with /
         if os.path.isdir(self.path_result_main) != 1:
             os.mkdir(self.path_result_main)
         self.path_result_raw = os.path.join(self.path_result_main, 'raw')
@@ -803,10 +804,31 @@ class SuperResAnalysis:
         return 1
 
 
-    def _fidCorr_TS_FiducialMarkers(self, field_name):
+    def _GDSC_TS_IOadapter(self, GDSC_result=None, TS_result=None):
+        GDSC_df = pd.read_csv(GDSC_result) # Read file
+        GDSC_df = GDSC_df.sort_values(by = ['Frame']) # sort by frame number
+
+        if TS_result == None: # i.e. convert GSDC to TS
+            TS_df = GDSC_df[['Frame', 'X', 'Y', 'origValue']] # take out important columns
+            TS_df.rename(columns = {'Frame': 'frame', 'X': 'x [nm]', 'Y': 'y [nm]', 'origValue': 'intensity [photon]'}, inplace = True) # Replace column names into ThunderSTORM format
+            TS_df['x [nm]'] = self.parameters['pixel_size'] * TS_df['x [nm]'] # Convert between pixel and nm
+            TS_df['y [nm]'] = self.parameters['pixel_size'] * TS_df['y [nm]'] # Convert between pixel and nm
+            TS_df.to_csv(GDSC_result.replace('.csv', '_TS.csv'), index = False) # Write ThunderSTORM file for fiducial correction with FIJI
+
+        else: # i.e. Feed corrected X,Y back to GDSC file
+            TS_df = pd.read_csv(TS_result) # Read file
+            TS_df['x [nm]'] = TS_df['x [nm]'] / self.parameters['pixel_size'] # Convert between pixel and nm
+            TS_df['y [nm]'] = TS_df['y [nm]'] / self.parameters['pixel_size'] # Convert between pixel and nm
+            GDSC_corrected_df = GDSC_df.copy()
+            GDSC_corrected_df['X'] = TS_df['x [nm]'].values # Replace values with corrected values
+            GDSC_corrected_df['Y'] = TS_df['y [nm]'].values # Replace values with corrected values
+            GDSC_corrected_df.to_csv(TS_result.replace('_corrected_TS.csv', '_corrected.csv'), index = False)
+
+
+    def _fidCorr_TS_FiducialMarkers(self, field_name, IJ=None):
         if self.parameters['method'] == 'ThunderSTORM':
             self.macro = """
-            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" +field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
             run("Show results table", "action=drift smoothingbandwidth=0.25 method=[Fiducial markers] ontimeratio="""+str(self.parameters['min_visibility'])+""" distancethr="""+str(self.parameters['max_distance'])+""" save=false");
             run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
             selectWindow("Averaged shifted histograms");
@@ -816,10 +838,27 @@ class SuperResAnalysis:
             saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
             close(\""""+field_name+"""_drift.tif\");
             """
-            # working... - compatiblity with data reconstructed by GDSC
+            IJ.py.run_macro(self.macro)
+
+        elif self.parameters['method'] == 'GDSC SMLM 1':
+            self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv") # Convert the GDSC result to TS format and save as _TS.csv
+            self.macro = """
+            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" +field_name+"""_results_TS.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Show results table", "action=drift smoothingbandwidth=0.25 method=[Fiducial markers] ontimeratio="""+str(self.parameters['min_visibility'])+""" distancethr="""+str(self.parameters['max_distance'])+""" save=false");
+            run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected_TS.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
+            selectWindow("Averaged shifted histograms");
+            saveAs("tif", \""""+self.path_result_fid+"/SR_"+field_name+"""_corrected.tif\");
+            close(\"SR_"""+field_name+"""_corrected.tif\");
+            selectWindow("Drift");
+            saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
+            close(\""""+field_name+"""_drift.tif\");
+            """
+            IJ.py.run_macro(self.macro)
+
+            self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv", TS_result=self.path_result_fid+ "/" + field_name+"_corrected_TS.csv") # Feed the corrected X, Y coordinates back to GDSC result file
 
 
-    def _fidCorr_TS_CrossCorrelation(self, field_name):
+    def _fidCorr_TS_CrossCorrelation(self, field_name, IJ=None):
         if self.parameters['method'] == 'ThunderSTORM':
             self.macro = """
             run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
@@ -832,7 +871,24 @@ class SuperResAnalysis:
             saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
             close(\""""+field_name+"""_drift.tif\");
             """
-            # working... - compatiblity with data reconstructed by GDSC
+            IJ.py.run_macro(self.macro)
+
+        elif self.parameters['method'] == 'GDSC SMLM 1':
+            self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv") # Convert the GDSC result to TS format and save as _TS.csv
+            self.macro = """
+            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results_TS.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Show results table", "action=drift magnification="""+str(self.parameters['magnification'])+""" method=[Cross correlation] ccsmoothingbandwidth=0.25 save=false steps="""+str(self.parameters['bin_size'])+""" showcorrelations=false");
+            run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected_TS.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
+            selectWindow("Averaged shifted histograms");
+            saveAs("tif", \""""+self.path_result_fid+"/SR_"+field_name+"""_corrected.tif\");
+            close(\"SR_"""+field_name+"""_corrected.tif\");
+            selectWindow("Drift");
+            saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
+            close(\""""+field_name+"""_drift.tif\");
+            """
+            IJ.py.run_macro(self.macro)
+
+            self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv", TS_result=self.path_result_fid+ "/" + field_name+"_corrected_TS.csv") # Feed the corrected X, Y coordinates back to GDSC result file
 
 
     def _fidCorr_GDSC_autoFid(self, field_name):
@@ -851,24 +907,22 @@ class SuperResAnalysis:
             c = 0 # progress indicator
 
         for field in workload:
-            imgFile = self.fov_paths[field]
-             
-            # working...
+            
             if self.parameters['fid_method'] == 'Fiducial marker - ThunderSTORM':
                 self.path_result_fid = self.path_result_main + "/ThunderSTORM_FidMarker_" + str(self.parameters['max_distance']) + "_" + str(self.parameters['min_visibility'])
                 if os.path.isdir(self.path_result_fid) != 1:
                     os.mkdir(self.path_result_fid)
 
-                self._fidCorr_TS_FiducialMarkers(field)
-                IJ.py.run_macro(self.macro)
+                self._fidCorr_TS_FiducialMarkers(field, IJ=IJ)
+                
+
             elif self.parameters['fid_method'] == 'Cross-correlation - ThunderSTORM':
                 self.path_result_fid = self.path_result_main + "/ThunderSTORM_CrossCorrelation_" + str(self.parameters['bin_size']) + "_" + str(self.parameters['magnification'])
                 if os.path.isdir(self.path_result_fid) != 1:
                     os.mkdir(self.path_result_fid)
 
-                self._fidCorr_TS_CrossCorrelation(field)
-                IJ.py.run_macro(self.macro)
-
+                self._fidCorr_TS_CrossCorrelation(field, IJ=IJ)
+                
 
             if progress_signal == None:
                 pass

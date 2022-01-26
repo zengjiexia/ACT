@@ -539,7 +539,7 @@ class MainWindow(QMainWindow):
         Block/Release parameter entry when a method is selected
         Change the options for fiducial correction for different reconstruction method
         """
-        GDSC_fid_corr_methods = ['', 'Auto fiducial'] # The methods listed will be deleted when ThunderSTROM is selected
+        GDSC_fid_corr_methods = ['', 'Fiducial marker - ThunderSTORM', 'Cross-correlation - ThunderSTORM'] # The methods listed will be deleted when ThunderSTROM is selected ##'Auto fiducial
         ThunderSTORM_fid_corr_methods = ['', 'Fiducial marker - ThunderSTORM', 'Cross-correlation - ThunderSTORM']
 
         if self.window.SupRes_methodSelector.currentText() == 'GDSC SMLM 1':
