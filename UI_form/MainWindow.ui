@@ -537,22 +537,21 @@
        <string>Cluster Analysis Parameters</string>
       </property>
       <layout class="QGridLayout" name="gridLayout_8">
-       <item row="1" column="5">
-        <widget class="QLabel" name="SupRes_minOnPropLabel">
-         <property name="text">
-          <string>Min on Prop</string>
+       <item row="1" column="1">
+        <widget class="QLabel" name="SupRes_minFrameLabel">
+         <property name="enabled">
+          <bool>false</bool>
          </property>
-        </widget>
-       </item>
-       <item row="0" column="2">
-        <widget class="QLineEdit" name="SupRes_dThreshEntry">
          <property name="text">
-          <string>15</string>
+          <string>Min Frame</string>
          </property>
         </widget>
        </item>
        <item row="1" column="4">
         <widget class="QLineEdit" name="SupRes_minBurstEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>2</string>
          </property>
@@ -560,99 +559,101 @@
        </item>
        <item row="1" column="6">
         <widget class="QLineEdit" name="SupRes_minOnPropEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>0.0</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
-        <widget class="QLabel" name="SupRes_minFrameLabel">
-         <property name="text">
-          <string>Min Frame</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="4">
-        <widget class="QLineEdit" name="SupRes_minLocEntry">
-         <property name="text">
-          <string>2</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="3">
-        <widget class="QLabel" name="SupRes_minLocLabel">
-         <property name="text">
-          <string>Min Loc</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="2">
-        <widget class="QLineEdit" name="SupRes_minFrameEntry">
-         <property name="text">
-          <string>2</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="4">
-        <widget class="QLineEdit" name="SupRes_EPSEntry">
-         <property name="text">
-          <string>75</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="3">
-        <widget class="QLabel" name="SupRes_EPSLabel">
-         <property name="text">
-          <string>EPS/nm</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="1">
         <widget class="QLabel" name="SupRes_dThreshLabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>dThresh/nm</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="2">
-        <widget class="QComboBox" name="SupRes_DBSCANSelector">
-         <item>
-          <property name="text">
-           <string>Burst</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Loc</string>
-          </property>
-         </item>
+       <item row="1" column="5">
+        <widget class="QLabel" name="SupRes_minOnPropLabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Min on Prop</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="3">
+        <widget class="QLabel" name="SupRes_minLocLabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Min Loc</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLineEdit" name="SupRes_dThreshEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>15</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="6">
+        <widget class="QLineEdit" name="SupRes_tThreshEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>101</string>
+         </property>
         </widget>
        </item>
        <item row="0" column="5">
         <widget class="QLabel" name="SupRes_tThreshLabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>tThresh/ms</string>
          </property>
         </widget>
        </item>
-       <item row="0" column="0">
-        <widget class="QCheckBox" name="SupRes_TempGroupingCheck">
-         <property name="text">
-          <string>Temporal Grouping</string>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="3">
         <widget class="QLabel" name="SupRes_minBurstLabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>Min Burst</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="SupRes_DBSCANLabel">
+       <item row="1" column="2">
+        <widget class="QLineEdit" name="SupRes_minFrameEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
-          <string>Subject</string>
+          <string>2</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="4">
+        <widget class="QLineEdit" name="SupRes_minLocEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>2</string>
          </property>
         </widget>
        </item>
@@ -663,24 +664,53 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="5">
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="SupRes_TempGroupingCheck">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Temporal Grouping</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLabel" name="SupRes_EPSLabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>EPS/nm</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLineEdit" name="SupRes_EPSEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>75</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="3">
         <widget class="QLabel" name="SupRes_minSampleLabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>Min Sample</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="6">
+       <item row="2" column="4">
         <widget class="QLineEdit" name="SupRes_minSampleEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>2</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="6">
-        <widget class="QLineEdit" name="SupRes_tThreshEntry">
-         <property name="text">
-          <string>101</string>
          </property>
         </widget>
        </item>
@@ -728,13 +758,13 @@
        </rect>
       </property>
       <property name="title">
-       <string>Fiducial Correction</string>
+       <string>Drift Correction</string>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
         <widget class="QLabel" name="SupRes_FidCorrMethodLabel">
          <property name="text">
-          <string>Fiducial Method</string>
+          <string>Correction Method</string>
          </property>
         </widget>
        </item>
@@ -830,12 +860,12 @@
        <string>Load</string>
       </property>
      </widget>
-     <widget class="QComboBox" name="SupRes_previousAttemptSelector">
+     <widget class="QComboBox" name="SupRes_previousReconstructionAttemptSelector">
       <property name="geometry">
        <rect>
-        <x>210</x>
+        <x>230</x>
         <y>40</y>
-        <width>551</width>
+        <width>531</width>
         <height>20</height>
        </rect>
       </property>
@@ -845,17 +875,17 @@
        </property>
       </item>
      </widget>
-     <widget class="QLabel" name="SupRes_previousAttemptsLabel">
+     <widget class="QLabel" name="SupRes_previousReconstructionAttemptsLabel">
       <property name="geometry">
        <rect>
         <x>20</x>
         <y>40</y>
-        <width>111</width>
+        <width>201</width>
         <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>Previous attempts</string>
+       <string>Previous reconstruction attempts</string>
       </property>
      </widget>
      <widget class="QPushButton" name="SupRes_runFidCorrButton">
@@ -871,7 +901,33 @@
        </rect>
       </property>
       <property name="text">
-       <string>Run Fiducial Correction</string>
+       <string>Run Drift Correction</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="SupRes_previousCorrectionAttemptsLabel">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>261</y>
+        <width>141</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Previous Drift Correction</string>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="SupRes_previousCorrectionAttemptsSelector">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>170</x>
+        <y>261</y>
+        <width>321</width>
+        <height>22</height>
+       </rect>
       </property>
      </widget>
     </widget>

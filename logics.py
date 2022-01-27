@@ -825,7 +825,7 @@ class SuperResAnalysis:
             GDSC_corrected_df.to_csv(TS_result.replace('_corrected_TS.csv', '_corrected.csv'), index = False)
 
 
-    def _fidCorr_TS_FiducialMarkers(self, field_name, IJ=None):
+    def _fidCorr_TS_fiducialMarkers(self, field_name, IJ=None):
         if self.parameters['method'] == 'ThunderSTORM':
             self.macro = """
             run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" +field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
@@ -858,7 +858,7 @@ class SuperResAnalysis:
             self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv", TS_result=self.path_result_fid+ "/" + field_name+"_corrected_TS.csv") # Feed the corrected X, Y coordinates back to GDSC result file
 
 
-    def _fidCorr_TS_CrossCorrelation(self, field_name, IJ=None):
+    def _fidCorr_TS_crossCorrelation(self, field_name, IJ=None):
         if self.parameters['method'] == 'ThunderSTORM':
             self.macro = """
             run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
@@ -913,7 +913,7 @@ class SuperResAnalysis:
                 if os.path.isdir(self.path_result_fid) != 1:
                     os.mkdir(self.path_result_fid)
 
-                self._fidCorr_TS_FiducialMarkers(field, IJ=IJ)
+                self._fidCorr_TS_fiducialMarkers(field, IJ=IJ)
                 
 
             elif self.parameters['fid_method'] == 'Cross-correlation - ThunderSTORM':
@@ -921,7 +921,7 @@ class SuperResAnalysis:
                 if os.path.isdir(self.path_result_fid) != 1:
                     os.mkdir(self.path_result_fid)
 
-                self._fidCorr_TS_CrossCorrelation(field, IJ=IJ)
+                self._fidCorr_TS_crossCorrelation(field, IJ=IJ)
                 
 
             if progress_signal == None:
@@ -930,6 +930,51 @@ class SuperResAnalysis:
                 c += 1
                 progress_signal.emit(c)
         return 1
+        
+
+    def _cluster_temporalGrouping(self, field_name):
+        pass
+
+
+    def _cluster_DBSCAN(self, field_name):
+        if self.parameters['method'] == 'GDSC SMLM 1':
+            data = pd.read_csv(os.path.join(self.path_result_main, field_name))
+            coord = data[['X', 'Y']]
+            coord = coord*pixel_size
+            coord_np = np.array(coord)
+        elif method == 2: #ThunderSTORM
+            data = pd.read_csv(filename)
+            coord = data[['x [nm]', 'y [nm]']]
+            coord_np = np.array(coord)
+
+
+    def superRes_clustering(self, progress_signal=None):
+
+        if progress_signal == None: #i.e. running in non-GUI mode
+            path_fiji = os.path.join(self.path_program, 'Fiji.app')
+            IJ = imagej.init(path_fiji, headless=False)
+            IJ.ui().showUI()
+            workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
+        else:
+            workload = sorted(self.fov_paths)
+            c = 0 # progress indicator
+
+        for field in workload:
+            
+            try:
+                self._cluster_temporalGrouping(field)
+            except KeyError:
+                pass
+
+            self._cluster_DBSCAN(field)
+
+            if progress_signal == None:
+                pass
+            else:
+                c += 1
+                progress_signal.emit(c)
+        return 1
+
 
 
 
