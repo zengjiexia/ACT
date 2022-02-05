@@ -79,6 +79,10 @@ class MainWindow(QMainWindow):
         self.window.SupRes_runFidCorrButton.clicked.connect(self.clickSRfidCorr)
         self.window.SupRes_previousCorrectionAttemptsSelector.currentIndexChanged.connect(self._SRPreviousCorrectionAttemptSelected)
 
+        self.window.SupRes_DBSCANCheck.stateChanged.connect(self._SRClusteringDBSCANSelection)
+        self.window.SupRes_TempGroupingCheck.stateChanged.connect(self._SRClusteringTemporalGroupingSelection)
+        self.window.SupRes_runClusteringButton.clicked.connect(self.clickSRClustering)
+
         ui_file.close()
         if not self.window:
             print(loader.errorString())
@@ -560,10 +564,8 @@ class MainWindow(QMainWindow):
         selected_attempt = self.window.SupRes_previousCorrectionAttemptsSelector.currentText()
 
         try:
-            self.path_result_corrected = self.previous_drift_attempts[selected_attempt]
-            print(self.path_result_corrected)
+            self.project.path_result_fid = self.previous_drift_attempts[selected_attempt]
         except KeyError:
-            del self.path_result_corrected
             pass
         
         if selected_attempt == 'raw':
@@ -589,6 +591,54 @@ class MainWindow(QMainWindow):
                     pass # Space for other drift correction methods
             else:
                 pass
+
+
+    def _SRClusteringDBSCANSelection(self):
+        if self.window.SupRes_DBSCANCheck.isChecked():
+            self.window.SupRes_runClusteringButton.setEnabled(True)
+            self.window.SupRes_EPSLabel.setEnabled(True)
+            self.window.SupRes_EPSEntry.setEnabled(True)
+            self.window.SupRes_minSampleLabel.setEnabled(True)
+            self.window.SupRes_minSampleEntry.setEnabled(True)
+            self.window.SupRes_TempGroupingCheck.setEnabled(True)
+        else:
+            self.window.SupRes_runClusteringButton.setEnabled(False)
+            self.window.SupRes_EPSLabel.setEnabled(False)
+            self.window.SupRes_EPSEntry.setEnabled(False)
+            self.window.SupRes_minSampleLabel.setEnabled(False)
+            self.window.SupRes_minSampleEntry.setEnabled(False)
+
+            self.window.SupRes_TempGroupingCheck.setChecked(False)
+            self.window.SupRes_TempGroupingCheck.setEnabled(False)
+
+
+    def _SRClusteringTemporalGroupingSelection(self):
+        if self.window.SupRes_TempGroupingCheck.isChecked():
+            self.window.SupRes_dThreshLabel.setEnabled(True)
+            self.window.SupRes_dThreshEntry.setEnabled(True)
+            self.window.SupRes_minLocLabel.setEnabled(True)
+            self.window.SupRes_minLocEntry.setEnabled(True)
+            self.window.SupRes_tThreshLabel.setEnabled(True)
+            self.window.SupRes_tThreshEntry.setEnabled(True)
+            self.window.SupRes_minFrameLabel.setEnabled(True)
+            self.window.SupRes_minFrameEntry.setEnabled(True)
+            self.window.SupRes_minBurstLabel.setEnabled(True)
+            self.window.SupRes_minBurstEntry.setEnabled(True)
+            self.window.SupRes_minOnPropLabel.setEnabled(True)
+            self.window.SupRes_minOnPropEntry.setEnabled(True)
+        else:
+            self.window.SupRes_dThreshLabel.setEnabled(False)
+            self.window.SupRes_dThreshEntry.setEnabled(False)
+            self.window.SupRes_minLocLabel.setEnabled(False)
+            self.window.SupRes_minLocEntry.setEnabled(False)
+            self.window.SupRes_tThreshLabel.setEnabled(False)
+            self.window.SupRes_tThreshEntry.setEnabled(False)
+            self.window.SupRes_minFrameLabel.setEnabled(False)
+            self.window.SupRes_minFrameEntry.setEnabled(False)
+            self.window.SupRes_minBurstLabel.setEnabled(False)
+            self.window.SupRes_minBurstEntry.setEnabled(False)
+            self.window.SupRes_minOnPropLabel.setEnabled(False)
+            self.window.SupRes_minOnPropEntry.setEnabled(False)
 
 
     def _methodOptSR(self):
@@ -659,6 +709,12 @@ class MainWindow(QMainWindow):
             guard = self._checkSRParameters()
             if guard == 1:
                 guard = self._runSRFidCorr()
+
+
+    def clickSRClustering(self):
+        guard = self._checkSRParameters()
+        if guard == 1:
+            guard = self._runClustering()
 
 
     def _checkSRParameters(self):
@@ -769,6 +825,10 @@ class MainWindow(QMainWindow):
         self.SRThread.finished.connect(
             lambda: self.window.SupRes_runFidCorrButton.setEnabled(True) # Enable 'Run fiducial correction' button
             )
+        self.window.SupRes_runClusteringButton.setEnabled(False) # Block 'Run Clustering' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runClusteringButton.setEnabled(True) # Reset 'Run Clustering' button
+            )
         self.SRThread.finished.connect(
             lambda: self._updateSRPreviousReconstructionAttempts() # Refresh previous reconstruction attempt list
             )
@@ -823,6 +883,10 @@ class MainWindow(QMainWindow):
         self.SRThread.finished.connect(
             lambda: self.window.SupRes_runFidCorrButton.setEnabled(True) # Reset 'Fiducial Correction' button
             )
+        self.window.SupRes_runClusteringButton.setEnabled(False) # Block 'Run Clustering' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runClusteringButton.setEnabled(True) # Reset 'Run Clustering' button
+            )
         self.SRThread.finished.connect(
             lambda: self._updateSRPreviousCorrectionAttempts# Add work to attempt list
             )
@@ -833,16 +897,61 @@ class MainWindow(QMainWindow):
         self.SRThread.finished.connect(
             lambda: self.restProgress()
             ) # Reset progress bar to rest
-#        try:
-#            self.SRThread.finished.connect(
-#                lambda: self._generateDFLSPReports()
-#                ) # Generate reports
-#        except:
-#            print(sys.exc_info())
+        if 'DBSCAN' not in self.SRparameters.keys():
+            pass 
+        else:
+            try:
+                self.SRThread.finished.connect(
+                    lambda: self._runClustering()
+                    ) 
+            except:
+                print(sys.exc_info())
 
 
     def _runClustering(self):
-        pass
+        self.initialiseProgress('Analysing clusters...', len(self.project.fov_paths))
+        # Create a QThread object
+        self.SRThread = QThread()
+        # Create a worker object
+        self.SRWorker = toolbox.SRWorker('Clustering', self.project, self.IJ)
+
+        # Connect signals and slots
+        self.SRThread.started.connect(self.SRWorker.run)
+        self.SRWorker.finished.connect(self.SRThread.quit)
+        self.SRWorker.finished.connect(self.SRWorker.deleteLater)
+        self.SRThread.finished.connect(self.SRThread.deleteLater)
+        # Move worker to the thread
+        self.SRWorker.moveToThread(self.SRThread)
+        # Connect progress signal to GUI
+        self.SRWorker.progress.connect(self.updateProgress)
+        # Start the thread
+        self.SRThread.start()
+        self.updateLog('Starting cluster analysis with DBSCAN...')
+        
+        # UI response
+        self.window.SupRes_runReconstructionButton.setEnabled(False) # Block 'Run Reconstruction' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runReconstructionButton.setEnabled(True) # Reset 'Run Reconstruction' button
+            )
+        self.window.SupRes_loadButton.setEnabled(False) # Block 'Load' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_loadButton.setEnabled(True) # Reset 'Load' button
+            )
+        self.window.SupRes_runFidCorrButton.setEnabled(False) # Block 'Run Fiducial Correction' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runFidCorrButton.setEnabled(True) # Reset 'Fiducial Correction' button
+            )
+        self.window.SupRes_runClusteringButton.setEnabled(False) # Block 'Run Clustering' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runClusteringButton.setEnabled(True) # Reset 'Run Clustering' button
+            )
+        # Passing next job
+        self.SRThread.finished.connect(
+            lambda: self.updateLog('Cluster analysis completed.')
+            )
+        self.SRThread.finished.connect(
+            lambda: self.restProgress()
+            ) # Reset progress bar to rest
 
 
     # Help informations

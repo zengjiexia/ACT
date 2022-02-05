@@ -42,6 +42,7 @@ Requirements
 	- [tifffile](https://pypi.org/project/tifffile/)
 	- [pandas - 0.25.3](https://pandas.pydata.org/)
 	- [scikit-image - 0.17.2](https://scikit-image.org/)
+	- [scikit-learn - 0.24.2](https://scikit-learn.org/)
 	- [PySide 6 - 6.0.2](https://pypi.org/project/PySide6/)
 	- [pyqtgraph](https://github.com/pyqtgraph/pyqtgraph)(Included locally)
 	- [pathos](https://pypi.org/project/pathos/)

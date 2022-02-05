@@ -151,5 +151,9 @@ class SRWorker(QObject):
                 self.project.superRes_fiducialCorrection(progress_signal=self.progress, IJ=self.IJ)
             except:
                 print(sys.exc_info())
-
+        elif self.job == 'Clustering':
+            try:
+                self.project.superRes_clustering(progress_signal=self.progress)
+            except:
+                print(sys.exc_info())
         self.finished.emit()

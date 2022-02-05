@@ -11,11 +11,11 @@ import imagej
 from skimage import io
 from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruction
 from skimage.measure import label, regionprops_table
+from sklearn.cluster import DBSCAN
 from astropy.convolution import RickerWavelet2DKernel
 from PIL import Image
 from scipy import ndimage
 from scipy.stats import norm
-from scipy.ndimage import filters
 import multiprocessing
 from pathos.multiprocessing import ProcessingPool as Pool
 from functools import partial
@@ -503,9 +503,9 @@ class LiposomeAssayAnalysis:
             return: xy_thresh - 2D array [[x1, y1], [x2, y2]...]
             """
 
-            data_max = filters.maximum_filter(data, 3)
+            data_max = ndimage.filters.maximum_filter(data, 3)
             maxima = (data == data_max)
-            data_min = filters.minimum_filter(data, 3)
+            data_min = ndimage.filters.minimum_filter(data, 3)
             diff = ((data_max - data_min) > threshold)
             maxima[diff == 0] = 0
 
@@ -725,7 +725,8 @@ class SuperResAnalysis:
 
         # Check if the images are stacks
         test_img = io.imread(list(self.fov_paths.values())[0])
-        if len(test_img.shape) != 3: 
+        self.img_shape = test_img.shape
+        if len(self.img_shape) != 3: 
             self.error = 'The images are not stacked. Please check.'
             return 0
 
@@ -930,30 +931,75 @@ class SuperResAnalysis:
                 c += 1
                 progress_signal.emit(c)
         return 1
-        
+
 
     def _cluster_temporalGrouping(self, field_name):
-        pass
+        paras = self.parameters['temporal_grouping']
+        print('Temporal grouping method is not completed. Skipped.')
+        return 1
 
 
     def _cluster_DBSCAN(self, field_name):
+        # The result files are named differently for drift corrected and uncorrected data
+        if self.path_result_fid.endswith('raw'):
+            df = pd.read_csv(os.path.join(self.path_result_fid, field_name+'_results.csv'))
+        else:
+            df = pd.read_csv(os.path.join(self.path_result_fid, field_name+'_corrected.csv'))
+
+        # The coordinates for localisations are in pixel for GDSC results and nm for TS results. This step unifies the unit to nm.
         if self.parameters['method'] == 'GDSC SMLM 1':
-            data = pd.read_csv(os.path.join(self.path_result_main, field_name))
-            coord = data[['X', 'Y']]
-            coord = coord*pixel_size
-            coord_np = np.array(coord)
-        elif method == 2: #ThunderSTORM
-            data = pd.read_csv(filename)
-            coord = data[['x [nm]', 'y [nm]']]
-            coord_np = np.array(coord)
+            df['x [nm]'] = df['X'] * self.parameters['pixel_size']
+            df['y [nm]'] = df['Y'] * self.parameters['pixel_size']
+        elif self.parameters['method'] == "ThunderSTORM":
+            df['X'] = df['x [nm]'] / self.parameters['pixel_size']
+            df['Y'] = df['y [nm]'] / self.parameters['pixel_size']
+
+        clustering = DBSCAN(eps=self.parameters['DBSCAN']['eps'] , min_samples=self.parameters['DBSCAN']['min_sample']).fit(df[['x [nm]', 'y [nm]']])
+
+        labels = list(clustering.labels_)
+        n_clusters = len(labels) - (1 if -1 in labels else 0)
+        n_noise = labels.count(-1)
+
+        # Label the localisations in the df with cluster ids
+        labelled_df = df.copy()
+        labelled_df['DBSCAN_label'] = labels
+
+        # Remove localisations labelled as noise from the df
+        cleaned_df = labelled_df.copy()
+        cleaned_df = labelled_df[labelled_df.DBSCAN_label != -1]
+        # Save cleaned localisation file
+        cleaned_df.to_csv(os.path.join(self.path_result_fid, field_name+'_clustered.csv'))
+
+        cleaned_labels = labels.copy()
+        cleaned_labels = cleaned_labels[cleaned_labels != -1]
+
+        # Magnify the coordinates
+        df['X_mag'] = (df['X'] * self.parameters['magnification']).astype(np.uint16)
+        df['Y_mag'] = (df['Y'] * self.parameters['magnification']).astype(np.uint16)
+
+        # Cluster profiling
+        placeholder = pd.DataFrame({
+            'X_mag': np.tile(range(0, self.img_shape[1] * self.parameters['magnification']), self.img_shape[2] * self.parameters['magnification']), 
+            # Repeat x coordinates y times
+            'Y_mag': np.repeat(range(0, self.img_shape[2] * self.parameters['magnification']), self.img_shape[1] * self.parameters['magnification'])
+            # Repeat y coordinates x times
+        }) # Creates a dataframe contains all the pixel localisations
+        
+        cluster_df = cleaned_df.copy()
+        cluster_df['DBSCAN_label'] += 1 # Change label 0 to 1
+        cluster_df = pd.concat([cluster_df, placeholder], axis=0, join='outer') # Combine placeholder with actual dataframe
+        cluster_df = pd.pivot_table(cluster_df, values='DBSCAN_label', index=['Y_mag'], columns=['X_mag'], aggfunc='max', fill_value=0) # Convert coordinate dataframe to array-like dataframe with index as Y, column as X, value as cluster label
+        cluster_img = cluster_df.to_numpy()
+        cluster_profile = regionprops_table(cluster_img, properties=['label', 'area', 'centroid', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity','bbox'])
+        cluster_profile = pd.DataFrame(cluster_profile)
+        cluster_profile.columns(['cluster_id', 'no_localisation', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax'])
+        cluster_profile.to_csv(os.path.join(self.path_result_fid, field_name+'_clusterProfile.csv'))
+        return 1
 
 
     def superRes_clustering(self, progress_signal=None):
 
         if progress_signal == None: #i.e. running in non-GUI mode
-            path_fiji = os.path.join(self.path_program, 'Fiji.app')
-            IJ = imagej.init(path_fiji, headless=False)
-            IJ.ui().showUI()
             workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
         else:
             workload = sorted(self.fov_paths)
