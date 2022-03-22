@@ -51,12 +51,18 @@ class MainWindow(QMainWindow):
             # File
         self.window.actionLoad.triggered.connect(self.loadDataPath)
             # Tools
+                # DFL
         self.window.actionRun_analysis_DFLSP.triggered.connect(self.clickDFLSPRun)
         self.window.actionGenerate_reports_DFLSP.triggered.connect(self.clickDFLSPGenerateReports)
         self.window.actionRead_tagged_results_DFLSP.triggered.connect(self.clickDFLSPReadTaggedResults)
-
+                # Liposome Assay
         self.window.actionRun_analysis_LipoAssay.triggered.connect(self.clickLipoAssayRun)
         self.window.actionGenerate_report_LipoAssay.triggered.connect(self.clickLipoAssayGenerateReport)
+                # SR
+        self.window.actionRun_reconstruction_SR.triggered.connect(self.clickSRRun)
+        self.window.actionRun_drift_correction_SR.triggered.connect(self.clickSRfidCorr)
+        self.window.actionRun_clustering_SR.triggered.connect(self.clickSRClustering)
+
             # Help
         self.window.actionComDet.triggered.connect(self.helpComDet)
         self.window.actionTrevor.triggered.connect(self.helpTrevor)
@@ -80,7 +86,7 @@ class MainWindow(QMainWindow):
         self.window.SupRes_previousCorrectionAttemptsSelector.currentIndexChanged.connect(self._SRPreviousCorrectionAttemptSelected)
 
         self.window.SupRes_DBSCANCheck.stateChanged.connect(self._SRClusteringDBSCANSelection)
-        self.window.SupRes_TempGroupingCheck.stateChanged.connect(self._SRClusteringTemporalGroupingSelection)
+        self.window.SupRes_filteringCheck.stateChanged.connect(self._SRClusteringFilteringSelection)
         self.window.SupRes_runClusteringButton.clicked.connect(self.clickSRClustering)
 
         ui_file.close()
@@ -556,7 +562,10 @@ class MainWindow(QMainWindow):
         self.window.SupRes_SRScaleEntry.setText(str(self.SRparameters['scale']))
 
         self.window.SupRes_runFidCorrButton.setEnabled(True)
+
+        self._createSRProject()
         self._updateSRPreviousCorrectionAttempts()
+
         return 1
 
 
@@ -600,7 +609,8 @@ class MainWindow(QMainWindow):
             self.window.SupRes_EPSEntry.setEnabled(True)
             self.window.SupRes_minSampleLabel.setEnabled(True)
             self.window.SupRes_minSampleEntry.setEnabled(True)
-            self.window.SupRes_TempGroupingCheck.setEnabled(True)
+
+            self.window.SupRes_filteringCheck.setEnabled(True)
         else:
             self.window.SupRes_runClusteringButton.setEnabled(False)
             self.window.SupRes_EPSLabel.setEnabled(False)
@@ -608,37 +618,21 @@ class MainWindow(QMainWindow):
             self.window.SupRes_minSampleLabel.setEnabled(False)
             self.window.SupRes_minSampleEntry.setEnabled(False)
 
-            self.window.SupRes_TempGroupingCheck.setChecked(False)
-            self.window.SupRes_TempGroupingCheck.setEnabled(False)
+            self.window.SupRes_filteringCheck.setChecked(False)
+            self.window.SupRes_filteringCheck.setEnabled(False)
 
 
-    def _SRClusteringTemporalGroupingSelection(self):
-        if self.window.SupRes_TempGroupingCheck.isChecked():
-            self.window.SupRes_dThreshLabel.setEnabled(True)
-            self.window.SupRes_dThreshEntry.setEnabled(True)
-            self.window.SupRes_minLocLabel.setEnabled(True)
-            self.window.SupRes_minLocEntry.setEnabled(True)
-            self.window.SupRes_tThreshLabel.setEnabled(True)
-            self.window.SupRes_tThreshEntry.setEnabled(True)
-            self.window.SupRes_minFrameLabel.setEnabled(True)
-            self.window.SupRes_minFrameEntry.setEnabled(True)
-            self.window.SupRes_minBurstLabel.setEnabled(True)
-            self.window.SupRes_minBurstEntry.setEnabled(True)
-            self.window.SupRes_minOnPropLabel.setEnabled(True)
-            self.window.SupRes_minOnPropEntry.setEnabled(True)
+    def _SRClusteringFilteringSelection(self):
+        if self.window.SupRes_filteringCheck.isChecked():
+            self.window.SupRes_precisionLabel.setEnabled(True)
+            self.window.SupRes_precisionEntry.setEnabled(True)
+            self.window.SupRes_sigmaLabel.setEnabled(True)
+            self.window.SupRes_sigmaEntry.setEnabled(True)
         else:
-            self.window.SupRes_dThreshLabel.setEnabled(False)
-            self.window.SupRes_dThreshEntry.setEnabled(False)
-            self.window.SupRes_minLocLabel.setEnabled(False)
-            self.window.SupRes_minLocEntry.setEnabled(False)
-            self.window.SupRes_tThreshLabel.setEnabled(False)
-            self.window.SupRes_tThreshEntry.setEnabled(False)
-            self.window.SupRes_minFrameLabel.setEnabled(False)
-            self.window.SupRes_minFrameEntry.setEnabled(False)
-            self.window.SupRes_minBurstLabel.setEnabled(False)
-            self.window.SupRes_minBurstEntry.setEnabled(False)
-            self.window.SupRes_minOnPropLabel.setEnabled(False)
-            self.window.SupRes_minOnPropEntry.setEnabled(False)
+            self.window.SupRes_precisionLabel.setEnabled(False)
+            self.window.SupRes_precisionEntry.setEnabled(False)
+            self.window.SupRes_sigmaLabel.setEnabled(False)
+            self.window.SupRes_sigmaEntry.setEnabled(False)
 
 
     def _methodOptSR(self):
@@ -699,7 +693,8 @@ class MainWindow(QMainWindow):
     def clickSRRun(self):
         guard = self._checkSRParameters()
         if guard == 1:
-            guard = self._runSRReconstruction()
+            self._createSRProject()
+            self._runSRReconstruction()
 
 
     def clickSRfidCorr(self):
@@ -708,13 +703,14 @@ class MainWindow(QMainWindow):
         else:
             guard = self._checkSRParameters()
             if guard == 1:
-                guard = self._runSRFidCorr()
+                self._createSRProject()
+                self._runSRFidCorr()
 
 
     def clickSRClustering(self):
         guard = self._checkSRParameters()
         if guard == 1:
-            guard = self._runClustering()
+            self._runClustering()
 
 
     def _checkSRParameters(self):
@@ -758,18 +754,14 @@ class MainWindow(QMainWindow):
             else:
                 pass
 
-            if self.window.SupRes_TempGroupingCheck.isChecked(): # Obtain parameters for temporal grouping if the method is required
-                self.SRparameters['temporal_grouping'] = {
-                "dThresh": float(self.window.SupRes_dThreshEntry.text()), # in nm
-                "min_loc": float(self.window.SupRes_minLocEntry.text()),
-                "tThresh": float(self.window.SupRes_tThreshEntry.text()),
-                "min_frame": float(self.window.SupRes_minFrameEntry.text()),
-                "min_burst": float(self.window.SupRes_minBurstEntry.text()),
-                "min_on_prop": float(self.window.SupRes_minOnPropEntry())
+            if self.window.SupRes_filteringCheck.isChecked(): # Obtain parameters for data filtering if the method is required
+                self.SRparameters['filter'] = {
+                "precision": float(self.window.SupRes_precisionEntry.text()), # in nm
+                "sigma": float(self.window.SupRes_sigmaEntry.text()) # in pixel
                 }
             if self.window.SupRes_DBSCANCheck.isChecked():# Obtain parameters for DBSCAN if the method is required
                 self.SRparameters['DBSCAN'] = {
-                "eps": float(self.window.SupRes_EPSEntry.text()),
+                "eps": float(self.window.SupRes_EPSEntry.text()), # in nm
                 "min_sample": float(self.window.SupRes_minSampleEntry.text())
                 }
 
@@ -777,14 +769,19 @@ class MainWindow(QMainWindow):
             self.showMessage('w', 'The parameters must be numbers.')
             return 0
 
+        self.project.update_parameters(self.SRparameters)
+        return 1
+
+
+    def _createSRProject(self):
         selected_attempt = self.window.SupRes_previousReconstructionAttemptSelector.currentText()
         if selected_attempt != "New":
-            self.project = SuperResAnalysis(self.data_path, self.SRparameters) # Create project for super resolution analysis
+            self.project = SuperResAnalysis(self.data_path) # Create project for super resolution analysis
             self.project.path_result_main = self.previous_reconstruction_attempts[selected_attempt]
             self.project.path_result_raw = self.project.path_result_main + '/raw'
             return 1
         else:
-            self.project = SuperResAnalysis(self.data_path, self.SRparameters) # Create project for super resolution analysis
+            self.project = SuperResAnalysis(self.data_path) # Create project for super resolution analysis
             if self.project.error != 1:
                 self.showMessage('c', self.project.error)
                 return 0

@@ -54,7 +54,7 @@
      </sizepolicy>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="DFLSPTab">
      <attribute name="title">
@@ -534,167 +534,20 @@
        </rect>
       </property>
       <property name="title">
-       <string>Cluster Analysis Parameters</string>
+       <string>Data Cleaning and Clustering</string>
       </property>
       <layout class="QGridLayout" name="gridLayout_8">
-       <item row="1" column="1">
-        <widget class="QLabel" name="SupRes_minFrameLabel">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>Min Frame</string>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="4">
-        <widget class="QLineEdit" name="SupRes_minBurstEntry">
+        <widget class="QLineEdit" name="SupRes_minSampleEntry">
          <property name="enabled">
           <bool>false</bool>
          </property>
          <property name="text">
           <string>2</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="6">
-        <widget class="QLineEdit" name="SupRes_minOnPropEntry">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>0.0</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLabel" name="SupRes_dThreshLabel">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>dThresh/nm</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="5">
-        <widget class="QLabel" name="SupRes_minOnPropLabel">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>Min on Prop</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="3">
-        <widget class="QLabel" name="SupRes_minLocLabel">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>Min Loc</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="2">
-        <widget class="QLineEdit" name="SupRes_dThreshEntry">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>15</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="6">
-        <widget class="QLineEdit" name="SupRes_tThreshEntry">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>101</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="5">
-        <widget class="QLabel" name="SupRes_tThreshLabel">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>tThresh/ms</string>
          </property>
         </widget>
        </item>
        <item row="1" column="3">
-        <widget class="QLabel" name="SupRes_minBurstLabel">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>Min Burst</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="2">
-        <widget class="QLineEdit" name="SupRes_minFrameEntry">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>2</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="4">
-        <widget class="QLineEdit" name="SupRes_minLocEntry">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>2</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QCheckBox" name="SupRes_DBSCANCheck">
-         <property name="text">
-          <string>DBSCAN</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QCheckBox" name="SupRes_TempGroupingCheck">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>Temporal Grouping</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="SupRes_EPSLabel">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>EPS/nm</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="2">
-        <widget class="QLineEdit" name="SupRes_EPSEntry">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>75</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="3">
         <widget class="QLabel" name="SupRes_minSampleLabel">
          <property name="enabled">
           <bool>false</bool>
@@ -704,13 +557,80 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="4">
-        <widget class="QLineEdit" name="SupRes_minSampleEntry">
+       <item row="0" column="4">
+        <widget class="QLineEdit" name="SupRes_sigmaEntry">
          <property name="enabled">
           <bool>false</bool>
          </property>
          <property name="text">
-          <string>2</string>
+          <string>5</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="SupRes_filteringCheck">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Filtering</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLabel" name="SupRes_EPSLabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>EPS/nm</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QLineEdit" name="SupRes_EPSEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>75</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLineEdit" name="SupRes_precisionEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>20</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="3">
+        <widget class="QLabel" name="SupRes_sigmaLabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Sigma/pixel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLabel" name="SupRes_precisionLabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Precision/nm</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QCheckBox" name="SupRes_DBSCANCheck">
+         <property name="text">
+          <string>DBSCAN</string>
          </property>
         </widget>
        </item>
@@ -1024,8 +944,17 @@
      <addaction name="actionRun_analysis_LipoAssay"/>
      <addaction name="actionGenerate_report_LipoAssay"/>
     </widget>
+    <widget class="QMenu" name="menuSuper_resolution_Analysis">
+     <property name="title">
+      <string>Super-resolution Analysis</string>
+     </property>
+     <addaction name="actionRun_reconstruction_SR"/>
+     <addaction name="actionRun_drift_correction_SR"/>
+     <addaction name="actionRun_clustering_SR"/>
+    </widget>
     <addaction name="menuDFL_SiMPull"/>
     <addaction name="menuLiposome_Assay"/>
+    <addaction name="menuSuper_resolution_Analysis"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -1089,6 +1018,21 @@
   <action name="actionGenerate_report_LipoAssay">
    <property name="text">
     <string>Generate report</string>
+   </property>
+  </action>
+  <action name="actionRun_reconstruction_SR">
+   <property name="text">
+    <string>Run reconstruction</string>
+   </property>
+  </action>
+  <action name="actionRun_drift_correction_SR">
+   <property name="text">
+    <string>Run drift correction</string>
+   </property>
+  </action>
+  <action name="actionRun_clustering_SR">
+   <property name="text">
+    <string>Run clustering</string>
    </property>
   </action>
  </widget>

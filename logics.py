@@ -96,9 +96,9 @@ class SimPullAnalysis:
             workload = sorted(self.fov_paths)
             c = 0 # progress indicator
 
-        #Check if the images are stack, and choose correct macro
-        test_img = io.imread(list(self.fov_paths.values())[0])
-        if len(test_img.shape) == 3: 
+        # Check if the images are stack, and choose correct macro
+        test_img = Image.open(list(self.fov_paths.values())[0])
+        if test_img.n_frames > 1: 
             stacked = True
         else:
             stacked = False
@@ -143,10 +143,12 @@ class SimPullAnalysis:
             except pd.errors.EmptyDataError:
                print('No spot found in FoV: ' + field)
             else:
-                df = df.loc[(df['X_(px)'] >= 30) & (df['X_(px)'] <= 480)]
-                df = df.loc[(df['Y_(px)'] >= 30) & (df['Y_(px)'] <= 480)]
+                img_dimensions = Image.open(imgFile).size
+                df = df.loc[(df['X_(px)'] >= img_dimensions[0] * 0.05) & (df['X_(px)'] <= img_dimensions[0] * 0.95)]
+                df = df.loc[(df['Y_(px)'] >= img_dimensions[1] * 0.05) & (df['Y_(px)'] <= img_dimensions[1] * 0.95)]
+                # Remove particles detected in the 5% pixels from the edges
                 df = df.reset_index(drop=True)
-                df.to_csv(saveto+'_results.csv')
+                df.to_csv(saveto + '_results.csv')
 
             if progress_signal == None:
                 pass
@@ -260,7 +262,7 @@ class SimPullAnalysis:
             
             inverse_mask = 1-mask
             img_bgonly = inverse_mask*img
-            seed_img = np.copy(img_bgonly) #https://scikit-image.org/docs/dev/auto_examples/features_detection/plot_holes_and_peaks.html
+            seed_img = np.copy(img_bgonly) # https://scikit-image.org/docs/dev/auto_examples/features_detection/plot_holes_and_peaks.html
             seed_img[1:-1, 1:-1] = img_bgonly.max()
             seed_mask = img_bgonly
             filled_img = reconstruction(seed_img, seed_mask, method='erosion')
@@ -693,12 +695,15 @@ class LiposomeAssayAnalysis:
 
 class SuperResAnalysis:
     
-    def __init__(self, data_path, parameters): 
+    def __init__(self, data_path): 
         self.error = 1 # When this value is 1, no error was detected in the object.
         self.path_program = os.path.dirname(__file__)
         self.path_data_main = data_path
-        self.parameters = parameters
         self.gather_project_info()
+
+
+    def update_parameters(self, parameters):
+        self.parameters = parameters
 
 
     def gather_project_info(self):
@@ -724,14 +729,16 @@ class SuperResAnalysis:
                 self.wells[fov[:4]] = [fov]
 
         # Check if the images are stacks
-        test_img = io.imread(list(self.fov_paths.values())[0])
-        self.img_shape = test_img.shape
-        if len(self.img_shape) != 3: 
+        test_img = Image.open(list(self.fov_paths.values())[0])
+        self.img_frames = test_img.n_frames
+        print('Test image number of frames: ' + str(self.img_frames))
+        if self.img_frames < 2: 
             self.error = 'The images are not stacked. Please check.'
             return 0
 
         # Get image dimensions
-        self.dimensions = list(test_img.shape)[1:]
+        self.dimensions = test_img.size
+        print('Test image dimensions: ' + str(self.dimensions))
 
         return 1
 
@@ -933,9 +940,28 @@ class SuperResAnalysis:
         return 1
 
 
-    def _cluster_temporalGrouping(self, field_name):
-        paras = self.parameters['temporal_grouping']
-        print('Temporal grouping method is not completed. Skipped.')
+    def _cluster_dataFiltering(self, field_name):
+        paras = self.parameters['filter']
+        # The result files are named differently for drift corrected and uncorrected data
+        if self.path_result_fid.endswith('raw'):
+            file_dir = os.path.join(self.path_result_fid, field_name+'_results.csv')
+        else:
+            file_dir = os.path.join(self.path_result_fid, field_name+'_corrected.csv')
+        df = pd.read_csv(file_dir)
+
+        # Filter spots based on chosen parameters
+        # For GDSC, sigma-SD, precision-Precisions
+        # For ThunderSTORM, sigma-sigma, precision-uncertainty
+        if self.parameters['method'] == 'GDSC SMLM 1':
+            df = df.loc[df['X SD'] <= paras['sigma']]
+            df = df.loc[df['Precisions (nm)'] <= paras['precision']]
+        elif self.parameters['method'] == 'ThunderSTORM':
+            df = df.loc[df['sigma [nm]'] <= paras['sigma']*self.parameters['pixel_size']]
+            df = df.loc[df['uncertainty_xy [nm]'] <= paras['precision']]
+
+        df = df.reset_index(drop=True)
+        df.to_csv(file_dir.replace('.csv', '_filter_'+str(paras['precision'])+'_'+str(paras['sigma'])+'.csv')) # File naming: filter_precision_sigma
+
         return 1
 
 
@@ -974,14 +1000,14 @@ class SuperResAnalysis:
         cleaned_labels = cleaned_labels[cleaned_labels != -1]
 
         # Magnify the coordinates
-        df['X_mag'] = (df['X'] * self.parameters['magnification']).astype(np.uint16)
-        df['Y_mag'] = (df['Y'] * self.parameters['magnification']).astype(np.uint16)
+        df['X_mag'] = (df['X'] * self.parameters['scale']).astype(np.uint16)
+        df['Y_mag'] = (df['Y'] * self.parameters['scale']).astype(np.uint16)
 
         # Cluster profiling
         placeholder = pd.DataFrame({
-            'X_mag': np.tile(range(0, self.img_shape[1] * self.parameters['magnification']), self.img_shape[2] * self.parameters['magnification']), 
+            'X_mag': np.tile(range(0, self.img_shape[1] * self.parameters['scale']), self.img_shape[2] * self.parameters['scale']), 
             # Repeat x coordinates y times
-            'Y_mag': np.repeat(range(0, self.img_shape[2] * self.parameters['magnification']), self.img_shape[1] * self.parameters['magnification'])
+            'Y_mag': np.repeat(range(0, self.img_shape[2] * self.parameters['scale']), self.img_shape[1] * self.parameters['scale'])
             # Repeat y coordinates x times
         }) # Creates a dataframe contains all the pixel localisations
         
@@ -1008,9 +1034,9 @@ class SuperResAnalysis:
         for field in workload:
             
             try:
-                self._cluster_temporalGrouping(field)
+                self._cluster_dataFiltering(field)
             except KeyError:
-                pass
+                print('Filtering is not selected.')
 
             self._cluster_DBSCAN(field)
 
@@ -1019,6 +1045,7 @@ class SuperResAnalysis:
             else:
                 c += 1
                 progress_signal.emit(c)
+
         return 1
 
 
