@@ -1,5 +1,6 @@
 import os
 import re
+from datetime import datetime
 import cv2
 import pandas as pd
 from tqdm import tqdm
@@ -10,16 +11,19 @@ import imagej
 from skimage import io
 from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruction
 from skimage.measure import label, regionprops_table
+from sklearn.cluster import DBSCAN
 from astropy.convolution import RickerWavelet2DKernel
 from PIL import Image
 from scipy import ndimage
 from scipy.stats import norm
-from scipy.ndimage import filters
 import multiprocessing
 from pathos.multiprocessing import ProcessingPool as Pool
 from functools import partial
 import psutil
-
+import scyjava
+import json
+plugins_dir = os.path.join(os.path.dirname(__file__), 'Fiji.app/plugins')
+scyjava.config.add_option(f'-Dplugins.dir={plugins_dir}')
 
 class SimPullAnalysis:
 
@@ -92,9 +96,9 @@ class SimPullAnalysis:
             workload = sorted(self.fov_paths)
             c = 0 # progress indicator
 
-        #Check if the images are stack, and choose correct macro
-        test_img = io.imread(list(self.fov_paths.values())[0])
-        if len(test_img.shape) == 3: 
+        # Check if the images are stack, and choose correct macro
+        test_img = Image.open(list(self.fov_paths.values())[0])
+        if test_img.n_frames > 1: 
             stacked = True
         else:
             stacked = False
@@ -134,11 +138,17 @@ class SimPullAnalysis:
                 IJ.py.run_macro(macro)
 
             # Remove edge particles
-            df = pd.read_csv(saveto+'_results.csv')
-            df = df.loc[(df['X_(px)'] >= 30) & (df['X_(px)'] <= 480)]
-            df = df.loc[(df['Y_(px)'] >= 30) & (df['Y_(px)'] <= 480)]
-            df = df.reset_index(drop=True)
-            df.to_csv(saveto+'_results.csv')
+            try:
+                df = pd.read_csv(saveto+'_results.csv')
+            except pd.errors.EmptyDataError:
+               print('No spot found in FoV: ' + field)
+            else:
+                img_dimensions = Image.open(imgFile).size
+                df = df.loc[(df['X_(px)'] >= img_dimensions[0] * 0.05) & (df['X_(px)'] <= img_dimensions[0] * 0.95)]
+                df = df.loc[(df['Y_(px)'] >= img_dimensions[1] * 0.05) & (df['Y_(px)'] <= img_dimensions[1] * 0.95)]
+                # Remove particles detected in the 5% pixels from the edges
+                df = df.reset_index(drop=True)
+                df.to_csv(saveto + '_results.csv')
 
             if progress_signal == None:
                 pass
@@ -159,7 +169,7 @@ class SimPullAnalysis:
         return 1
 
     
-    def call_Trevor(self, bg_thres = 1, tophat_disk_size=10, progress_signal=None, erode_size = 1):
+    def call_Trevor(self, bg_thres = 1, tophat_disk_size=50, progress_signal=None, erode_size = 1):
         if progress_signal == None: #i.e. running in non-GUI mode
             workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
         else:
@@ -259,7 +269,7 @@ class SimPullAnalysis:
             
             inverse_mask = 1-mask
             img_bgonly = inverse_mask*img
-            seed_img = np.copy(img_bgonly) #https://scikit-image.org/docs/dev/auto_examples/features_detection/plot_holes_and_peaks.html
+            seed_img = np.copy(img_bgonly) # https://scikit-image.org/docs/dev/auto_examples/features_detection/plot_holes_and_peaks.html
             seed_img[1:-1, 1:-1] = img_bgonly.max()
             seed_mask = img_bgonly
             filled_img = reconstruction(seed_img, seed_mask, method='erosion')
@@ -502,9 +512,9 @@ class LiposomeAssayAnalysis:
             return: xy_thresh - 2D array [[x1, y1], [x2, y2]...]
             """
 
-            data_max = filters.maximum_filter(data, 3)
+            data_max = ndimage.filters.maximum_filter(data, 3)
             maxima = (data == data_max)
-            data_min = filters.minimum_filter(data, 3)
+            data_min = ndimage.filters.minimum_filter(data, 3)
             diff = ((data_max - data_min) > threshold)
             maxima[diff == 0] = 0
 
@@ -708,21 +718,386 @@ class LiposomeAssayAnalysis:
 
 
 
+class SuperResAnalysis:
+    
+    def __init__(self, data_path): 
+        self.error = 1 # When this value is 1, no error was detected in the object.
+        self.path_program = os.path.dirname(__file__)
+        self.path_data_main = data_path
+        self.gather_project_info()
+
+
+    def update_parameters(self, parameters):
+        self.parameters = parameters
+
+
+    def gather_project_info(self):
+
+        self.fov_paths = {} # dict - FoV name: path to the corresponding image
+
+        for root, dirs, files in os.walk(self.path_data_main):
+            for file in files:
+                if file.endswith(".tif"):
+                    try:
+                        pos = re.findall(r"X\dY\dR\dW\dC\d", file)[-1]
+                    except IndexError:
+                        self.error = 'Error in the naming system of the images. Please make sure the image names contain coordinate in form of XnYnRnWnCn.'
+                        return 0
+                    self.fov_paths[pos] = os.path.join(root, file)
+
+        self.wells = {} # dict - well name: list of FoV taken in the well
+
+        for fov in self.fov_paths:
+            if fov[:4] in self.wells:
+                self.wells[fov[:4]] += [fov]
+            else:
+                self.wells[fov[:4]] = [fov]
+
+        # Check if the images are stacks
+        test_img = Image.open(list(self.fov_paths.values())[0])
+        self.img_frames = test_img.n_frames
+        print('Test image number of frames: ' + str(self.img_frames))
+        if self.img_frames < 2: 
+            self.error = 'The images are not stacked. Please check.'
+            return 0
+
+        # Get image dimensions
+        self.dimensions = test_img.size
+        print('Test image dimensions: ' + str(self.dimensions))
+
+        return 1
+
+
+    def _compose_fiji_macro(self, field_name):
+        if self.parameters['method'] == 'GDSC SMLM 1':
+            self.macro = """
+            run("Peak Fit", "template=[None] config_file=["""+self.path_result_raw + '/gdsc.smlm.settings.xml' +"""] calibration="""+str(self.parameters['pixel_size'])+""" gain="""+str(self.parameters['camera_gain'])+""" exposure_time="""+str(self.parameters['exposure_time'])+""" initial_stddev0=2.000 initial_stddev1=2.000 initial_angle=0.000 smoothing=0.50 smoothing2=3 search_width=3 fit_solver=[Least Squares Estimator (LSE)] fit_function=Circular local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 fail_limit=10 include_neighbours neighbour_height=0.30 residuals_threshold=1 duplicate_distance=0.50 shift_factor=2 signal_strength="""+str(self.parameters['signal_strength'])+""" width_factor=2 precision="""+str(self.parameters['precision'])+""" min_photons="""+str(self.parameters['min_photons'])+""" results_table=Uncalibrated image=[Localisations (width=precision)] weighted equalised image_precision=5 image_scale="""+str(self.parameters['scale'])+""" results_dir=["""+self.path_result_raw+"""] local_background camera_bias="""+str(self.parameters['camera_bias'])+""" fit_criteria=[Least-squared error] significant_digits=5 coord_delta=0.0001 lambda=10.0000 max_iterations=20 stack");
+            selectWindow(\""""+field_name+""" (LSE) SuperRes\");
+            saveAs("tif", \""""+self.path_result_raw + '/SR_' + field_name+""".tif\");
+            close(\"SR_"""+field_name+""".tif\");
+            selectWindow("Fit Results");
+            saveAs("Results", \""""+self.path_result_raw + '/' + field_name+"""_results.csv\");
+            close("Fit Results");
+            close("Log");
+            close(\""""+field_name+"""\");
+            """
+        elif self.parameters['method'] == 'ThunderSTORM':
+            self.macro = """
+            run("Camera setup", "offset="""+str(self.parameters['camera_bias'])+""" quantumefficiency="""+str(self.parameters['quantum_efficiency'])+""" isemgain=true photons2adu=3.6 gainem="""+str(self.parameters['camera_gain'])+""" pixelsize="""+str(self.parameters['pixel_size'])+"""");
+            run("Run analysis", "filter=[Wavelet filter (B-Spline)] scale=2.0 order=3 detector=[Local maximum] connectivity=8-neighbourhood threshold=std(Wave.F1) estimator=[PSF: Integrated Gaussian] sigma=1.6 fitradius=3 method=[Weighted Least squares] full_image_fitting=false mfaenabled=false renderer=[Averaged shifted histograms] magnification="""+str(self.parameters['scale'])+""" colorize=false threed=false shifts=2 repaint="""+str(int(self.parameters['exposure_time']))+"""");
+            run("Export results", "floatprecision=5 filepath="""+self.path_result_raw + '/' + field_name+"""_results.csv fileformat=[CSV (comma separated)] sigma=true intensity=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
+            selectWindow('Averaged shifted histograms');
+            saveAs("tif", \""""+self.path_result_raw + '/SR_' + field_name+""".tif\");
+            close(\"SR_"""+field_name+""".tif\");
+            close(\""""+field_name+"""\");
+            """
+        
+
+    def superRes_reconstruction(self, progress_signal=None, IJ=None):
+
+        # Construct dirs for results
+        self.timeStamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        self.path_result_main = (self.path_data_main + '_' + self.timeStamp + '_' + self.parameters['method'])
+        self.path_result_main = self.path_result_main.replace("\\", "/") # fiji only reads path with /
+        self.path_result_main = self.path_result_main.replace(" ", "_") # fiji only reads path with /
+        if os.path.isdir(self.path_result_main) != 1:
+            os.mkdir(self.path_result_main)
+        self.path_result_raw = os.path.join(self.path_result_main, 'raw')
+        self.path_result_raw = self.path_result_raw.replace("\\", "/")# fiji only reads path with /
+        if os.path.isdir(self.path_result_raw) != 1:
+            os.mkdir(self.path_result_raw)
+
+        with open(os.path.join(self.path_result_main, 'parameters.txt'), 'w') as js_file:
+            json.dump(self.parameters, js_file)
+
+        if progress_signal == None: #i.e. running in non-GUI mode
+            path_fiji = os.path.join(self.path_program, 'Fiji.app')
+            IJ = imagej.init(path_fiji, headless=False)
+            IJ.ui().showUI()
+            workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
+        else:
+            workload = sorted(self.fov_paths)
+            c = 0 # progress indicator
+
+        for field in workload:
+            imgFile = self.fov_paths[field]
+            #saveto = os.path.join(self.path_result_raw, field)
+            #saveto = saveto.replace("\\", "/")
+            img = IJ.io().open(imgFile)
+            IJ.ui().show(field, img)
+
+            self._compose_fiji_macro(field)
+            IJ.py.run_macro(self.macro)
+
+            if progress_signal == None:
+                pass
+            else:
+                c += 1
+                progress_signal.emit(c)
+        return 1
+
+
+    def _GDSC_TS_IOadapter(self, GDSC_result=None, TS_result=None):
+        GDSC_df = pd.read_csv(GDSC_result) # Read file
+        GDSC_df = GDSC_df.sort_values(by = ['Frame']) # sort by frame number
+
+        if TS_result == None: # i.e. convert GSDC to TS
+            TS_df = GDSC_df[['Frame', 'X', 'Y', 'origValue']] # take out important columns
+            TS_df.rename(columns = {'Frame': 'frame', 'X': 'x [nm]', 'Y': 'y [nm]', 'origValue': 'intensity [photon]'}, inplace = True) # Replace column names into ThunderSTORM format
+            TS_df['x [nm]'] = self.parameters['pixel_size'] * TS_df['x [nm]'] # Convert between pixel and nm
+            TS_df['y [nm]'] = self.parameters['pixel_size'] * TS_df['y [nm]'] # Convert between pixel and nm
+            TS_df.to_csv(GDSC_result.replace('.csv', '_TS.csv'), index = False) # Write ThunderSTORM file for fiducial correction with FIJI
+
+        else: # i.e. Feed corrected X,Y back to GDSC file
+            TS_df = pd.read_csv(TS_result) # Read file
+            TS_df['x [nm]'] = TS_df['x [nm]'] / self.parameters['pixel_size'] # Convert between pixel and nm
+            TS_df['y [nm]'] = TS_df['y [nm]'] / self.parameters['pixel_size'] # Convert between pixel and nm
+            GDSC_corrected_df = GDSC_df.copy()
+            GDSC_corrected_df['X'] = TS_df['x [nm]'].values # Replace values with corrected values
+            GDSC_corrected_df['Y'] = TS_df['y [nm]'].values # Replace values with corrected values
+            GDSC_corrected_df.to_csv(TS_result.replace('_corrected_TS.csv', '_corrected.csv'), index = False)
+
+
+    def _fidCorr_TS_fiducialMarkers(self, field_name, IJ=None):
+        if self.parameters['method'] == 'ThunderSTORM':
+            self.macro = """
+            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" +field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Show results table", "action=drift smoothingbandwidth=0.25 method=[Fiducial markers] ontimeratio="""+str(self.parameters['min_visibility'])+""" distancethr="""+str(self.parameters['max_distance'])+""" save=false");
+            run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
+            selectWindow("Averaged shifted histograms");
+            saveAs("tif", \""""+self.path_result_fid+"/SR_"+field_name+"""_corrected.tif\");
+            close(\"SR_"""+field_name+"""_corrected.tif\");
+            selectWindow("Drift");
+            saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
+            close(\""""+field_name+"""_drift.tif\");
+            """
+            IJ.py.run_macro(self.macro)
+
+        elif self.parameters['method'] == 'GDSC SMLM 1':
+            self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv") # Convert the GDSC result to TS format and save as _TS.csv
+            self.macro = """
+            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" +field_name+"""_results_TS.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Show results table", "action=drift smoothingbandwidth=0.25 method=[Fiducial markers] ontimeratio="""+str(self.parameters['min_visibility'])+""" distancethr="""+str(self.parameters['max_distance'])+""" save=false");
+            run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected_TS.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
+            selectWindow("Averaged shifted histograms");
+            saveAs("tif", \""""+self.path_result_fid+"/SR_"+field_name+"""_corrected.tif\");
+            close(\"SR_"""+field_name+"""_corrected.tif\");
+            selectWindow("Drift");
+            saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
+            close(\""""+field_name+"""_drift.tif\");
+            """
+            IJ.py.run_macro(self.macro)
+
+            self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv", TS_result=self.path_result_fid+ "/" + field_name+"_corrected_TS.csv") # Feed the corrected X, Y coordinates back to GDSC result file
+
+
+    def _fidCorr_TS_crossCorrelation(self, field_name, IJ=None):
+        if self.parameters['method'] == 'ThunderSTORM':
+            self.macro = """
+            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Show results table", "action=drift magnification="""+str(self.parameters['magnification'])+""" method=[Cross correlation] ccsmoothingbandwidth=0.25 save=false steps="""+str(self.parameters['bin_size'])+""" showcorrelations=false");
+            run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
+            selectWindow("Averaged shifted histograms");
+            saveAs("tif", \""""+self.path_result_fid+"/SR_"+field_name+"""_corrected.tif\");
+            close(\"SR_"""+field_name+"""_corrected.tif\");
+            selectWindow("Drift");
+            saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
+            close(\""""+field_name+"""_drift.tif\");
+            """
+            IJ.py.run_macro(self.macro)
+
+        elif self.parameters['method'] == 'GDSC SMLM 1':
+            self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv") # Convert the GDSC result to TS format and save as _TS.csv
+            self.macro = """
+            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results_TS.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Show results table", "action=drift magnification="""+str(self.parameters['magnification'])+""" method=[Cross correlation] ccsmoothingbandwidth=0.25 save=false steps="""+str(self.parameters['bin_size'])+""" showcorrelations=false");
+            run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected_TS.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
+            selectWindow("Averaged shifted histograms");
+            saveAs("tif", \""""+self.path_result_fid+"/SR_"+field_name+"""_corrected.tif\");
+            close(\"SR_"""+field_name+"""_corrected.tif\");
+            selectWindow("Drift");
+            saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
+            close(\""""+field_name+"""_drift.tif\");
+            """
+            IJ.py.run_macro(self.macro)
+
+            self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv", TS_result=self.path_result_fid+ "/" + field_name+"_corrected_TS.csv") # Feed the corrected X, Y coordinates back to GDSC result file
+
+
+    def _fidCorr_GDSC_autoFid(self, field_name):
+        if self.parameters['method'] == 'GDSC SMLM 1':
+            pass
+
+
+    def superRes_fiducialCorrection(self, progress_signal=None, IJ=None):
+        if progress_signal == None: #i.e. running in non-GUI mode
+            path_fiji = os.path.join(self.path_program, 'Fiji.app')
+            IJ = imagej.init(path_fiji, headless=False)
+            IJ.ui().showUI()
+            workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
+        else:
+            workload = sorted(self.fov_paths)
+            c = 0 # progress indicator
+
+        for field in workload:
+            
+            if self.parameters['fid_method'] == 'Fiducial marker - ThunderSTORM':
+                self.path_result_fid = self.path_result_main + "/ThunderSTORM_FidMarker_" + str(self.parameters['max_distance']) + "_" + str(self.parameters['min_visibility'])
+                if os.path.isdir(self.path_result_fid) != 1:
+                    os.mkdir(self.path_result_fid)
+
+                self._fidCorr_TS_fiducialMarkers(field, IJ=IJ)
+                
+
+            elif self.parameters['fid_method'] == 'Cross-correlation - ThunderSTORM':
+                self.path_result_fid = self.path_result_main + "/ThunderSTORM_CrossCorrelation_" + str(self.parameters['bin_size']) + "_" + str(self.parameters['magnification'])
+                if os.path.isdir(self.path_result_fid) != 1:
+                    os.mkdir(self.path_result_fid)
+
+                self._fidCorr_TS_crossCorrelation(field, IJ=IJ)
+                
+
+            if progress_signal == None:
+                pass
+            else:
+                c += 1
+                progress_signal.emit(c)
+        return 1
+
+
+    def _cluster_dataFiltering(self, field_name):
+        paras = self.parameters['filter']
+        # The result files are named differently for drift corrected and uncorrected data
+        if self.path_result_fid.endswith('raw'):
+            file_dir = os.path.join(self.path_result_fid, field_name+'_results.csv')
+        else:
+            file_dir = os.path.join(self.path_result_fid, field_name+'_corrected.csv')
+        df = pd.read_csv(file_dir)
+
+        # Filter spots based on chosen parameters
+        # For GDSC, sigma-SD, precision-Precisions
+        # For ThunderSTORM, sigma-sigma, precision-uncertainty
+        if self.parameters['method'] == 'GDSC SMLM 1':
+            df = df.loc[df['X SD'] <= paras['sigma']]
+            df = df.loc[df['Precisions (nm)'] <= paras['precision']]
+        elif self.parameters['method'] == 'ThunderSTORM':
+            df = df.loc[df['sigma [nm]'] <= paras['sigma']*self.parameters['pixel_size']]
+            df = df.loc[df['uncertainty_xy [nm]'] <= paras['precision']]
+
+        df = df.reset_index(drop=True)
+        df.to_csv(file_dir.replace('.csv', '_filter_'+str(paras['precision'])+'_'+str(paras['sigma'])+'.csv')) # File naming: filter_precision_sigma
+
+        return 1
+
+
+    def _cluster_DBSCAN(self, field_name):
+        # The result files are named differently for drift corrected and uncorrected data
+        if self.path_result_fid.endswith('raw'):
+            file_dir = os.path.join(self.path_result_fid, field_name+'_results.csv')
+        else:
+            file_dir = os.path.join(self.path_result_fid, field_name+'_corrected.csv')
+
+        # Using  filtered data for clustering
+        try:
+            filters = self.parameters['filter']
+            file_dir = file_dir.replace('.csv', '_filter_'+str(paras['precision'])+'_'+str(paras['sigma'])+'.csv')
+        except KeyError:
+            pass
+
+        df = pd.read_csv(file_dir)
+        # The coordinates for localisations are in pixel for GDSC results and nm for TS results. This step unifies the unit to nm.
+        if self.parameters['method'] == 'GDSC SMLM 1':
+            df['x [nm]'] = df['X'] * self.parameters['pixel_size']
+            df['y [nm]'] = df['Y'] * self.parameters['pixel_size']
+        elif self.parameters['method'] == "ThunderSTORM":
+            df['X'] = df['x [nm]'] / self.parameters['pixel_size']
+            df['Y'] = df['y [nm]'] / self.parameters['pixel_size']
+
+        clustering = DBSCAN(eps=self.parameters['DBSCAN']['eps'] , min_samples=self.parameters['DBSCAN']['min_sample']).fit(df[['x [nm]', 'y [nm]']])
+
+        labels = list(clustering.labels_)
+        n_clusters = len(labels) - (1 if -1 in labels else 0)
+        n_noise = labels.count(-1)
+
+        # Label the localisations in the df with cluster ids
+        labelled_df = df.copy()
+        labelled_df['DBSCAN_label'] = labels
+
+        # Remove localisations labelled as noise from the df
+        cleaned_df = labelled_df.copy()
+        cleaned_df = labelled_df[labelled_df.DBSCAN_label != -1]
+        # Save cleaned localisation file
+        cleaned_df.to_csv(os.path.join(self.path_result_fid, field_name+'_clustered.csv'))
+
+        cleaned_labels = labels.copy()
+        cleaned_labels = cleaned_labels[cleaned_labels != -1]
+
+        # Magnify the coordinates
+        df['X_mag'] = (df['X'] * self.parameters['scale']).astype(np.uint16)
+        df['Y_mag'] = (df['Y'] * self.parameters['scale']).astype(np.uint16)
+
+        # Cluster profiling
+        placeholder = pd.DataFrame({
+            'X_mag': np.tile(range(0, self.img_shape[1] * self.parameters['scale']), self.img_shape[2] * self.parameters['scale']), 
+            # Repeat x coordinates y times
+            'Y_mag': np.repeat(range(0, self.img_shape[2] * self.parameters['scale']), self.img_shape[1] * self.parameters['scale'])
+            # Repeat y coordinates x times
+        }) # Creates a dataframe contains all the pixel localisations
+        
+        cluster_df = cleaned_df.copy()
+        cluster_df['DBSCAN_label'] += 1 # Change label 0 to 1
+        cluster_df = pd.concat([cluster_df, placeholder], axis=0, join='outer') # Combine placeholder with actual dataframe
+        cluster_df = pd.pivot_table(cluster_df, values='DBSCAN_label', index=['Y_mag'], columns=['X_mag'], aggfunc='max', fill_value=0) # Convert coordinate dataframe to array-like dataframe with index as Y, column as X, value as cluster label
+        cluster_img = cluster_df.to_numpy()
+        cluster_profile = regionprops_table(cluster_img, properties=['label', 'area', 'centroid', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity','bbox'])
+        cluster_profile = pd.DataFrame(cluster_profile)
+        cluster_profile.columns(['cluster_id', 'no_localisation', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax'])
+        cluster_profile.to_csv(os.path.join(self.path_result_fid, field_name+'_clusterProfile.csv'))
+        return 1
+
+
+    def superRes_clustering(self, progress_signal=None):
+
+        if progress_signal == None: #i.e. running in non-GUI mode
+            workload = tqdm(sorted(self.fov_paths)) # using tqdm as progress bar in cmd
+        else:
+            workload = sorted(self.fov_paths)
+            c = 0 # progress indicator
+
+        for field in workload:
+            
+            try:
+                self._cluster_dataFiltering(field)
+            except KeyError:
+                print('Filtering is not selected.')
+
+            self._cluster_DBSCAN(field)
+
+            if progress_signal == None:
+                pass
+            else:
+                c += 1
+                progress_signal.emit(c)
+
+        return 1
+
+
+
 if __name__ == "__main__":
 
-    path = input('Please input the path for analysis:\n')
-    if os.path.isdir(path) != True:
-    	print('Please input valid directory for data.')
-    	quit()
-    project = SimPullAnalysis(path)
-    print('Launching: ' + path)
-    size = input('Please input the estimated size of particles(in pixels):\n')
-    threshold = input('Please input the threshold to apply(in nSD):\n')
-    print('Picking up particles in Fiji...')
-    project.call_ComDet(size=size, threshold=threshold)
-    print('Generating reports...')
-    project.generate_reports()
-    print('Done.')
+    #path = input('Please input the path for analysis:\n')
+    #if os.path.isdir(path) != True:
+    #	print('Please input valid directory for data.')
+    #	quit()
+    project = SuperResAnalysis(r"D:\Work\Supres_test\Sample", {'method': 'GDSC SMLM 1'})
+    #print('Launching: ' + path)
+    #size = input('Please input the estimated size of particles(in pixels):\n')
+    #threshold = input('Please input the threshold to apply(in nSD):\n')
+    #print('Picking up particles in Fiji...')
+    project.call_GDSC_SMLM()
+    #print('Generating reports...')
+    #project.generate_reports()
+    #print('Done.')
 
 
 

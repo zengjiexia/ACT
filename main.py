@@ -8,10 +8,14 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtGui import QIcon
 import pyqtgraph as pg
 import toolbox
-from logics import SimPullAnalysis, LiposomeAssayAnalysis
+from logics import SimPullAnalysis, LiposomeAssayAnalysis, SuperResAnalysis
 import pandas as pd
 import numpy as np
 import imagej
+import scyjava
+import json
+plugins_dir = os.path.join(os.path.dirname(__file__), 'Fiji.app/plugins')
+scyjava.config.add_option(f'-Dplugins.dir={plugins_dir}')
 pg.setConfigOption('background', 'w')
 
 class MainWindow(QMainWindow):
@@ -19,6 +23,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.loadUI()
+
 
     def loadUI(self):
 
@@ -46,12 +51,18 @@ class MainWindow(QMainWindow):
             # File
         self.window.actionLoad.triggered.connect(self.loadDataPath)
             # Tools
+                # DFL
         self.window.actionRun_analysis_DFLSP.triggered.connect(self.clickDFLSPRun)
         self.window.actionGenerate_reports_DFLSP.triggered.connect(self.clickDFLSPGenerateReports)
         self.window.actionRead_tagged_results_DFLSP.triggered.connect(self.clickDFLSPReadTaggedResults)
-
+                # Liposome Assay
         self.window.actionRun_analysis_LipoAssay.triggered.connect(self.clickLipoAssayRun)
         self.window.actionGenerate_report_LipoAssay.triggered.connect(self.clickLipoAssayGenerateReport)
+                # SR
+        self.window.actionRun_reconstruction_SR.triggered.connect(self.clickSRRun)
+        self.window.actionRun_drift_correction_SR.triggered.connect(self.clickSRfidCorr)
+        self.window.actionRun_clustering_SR.triggered.connect(self.clickSRClustering)
+
             # Help
         self.window.actionComDet.triggered.connect(self.helpComDet)
         self.window.actionTrevor.triggered.connect(self.helpTrevor)
@@ -64,6 +75,19 @@ class MainWindow(QMainWindow):
 
         # LipoAssay window widgets
         self.window.LipoAssay_runButton.clicked.connect(self.clickLipoAssayRun)
+
+        # SR window widgets
+        self.window.SupRes_runReconstructionButton.clicked.connect(self.clickSRRun)
+        self.window.SupRes_methodSelector.currentIndexChanged.connect(self._methodOptSR)
+        self.window.SupRes_FidCorrMethodSelector.currentIndexChanged.connect(self._methodOptSRFidCorr)
+        self.window.SupRes_loadButton.clicked.connect(self.clickLoadSRPreviousAttempts)
+        self.window.SupRes_previousReconstructionAttemptSelector.currentIndexChanged.connect(self._SRPreviousReconstructionAttemptSelected)
+        self.window.SupRes_runFidCorrButton.clicked.connect(self.clickSRfidCorr)
+        self.window.SupRes_previousCorrectionAttemptsSelector.currentIndexChanged.connect(self._SRPreviousCorrectionAttemptSelected)
+
+        self.window.SupRes_DBSCANCheck.stateChanged.connect(self._SRClusteringDBSCANSelection)
+        self.window.SupRes_filteringCheck.stateChanged.connect(self._SRClusteringFilteringSelection)
+        self.window.SupRes_runClusteringButton.clicked.connect(self.clickSRClustering)
 
         ui_file.close()
         if not self.window:
@@ -113,6 +137,7 @@ class MainWindow(QMainWindow):
         data_path = QFileDialog.getExistingDirectory(parent=self.window, caption='Browse path for data.', dir=os.path.dirname(__file__))
         self.window.DFLSP_pathEntry.setText(data_path)
         self.window.LipoAssay_pathEntry.setText(data_path)
+        self.window.SupRes_pathEntry.setText(data_path)
         #* set all paths
 
     # Diffraction Limited SiMPull Analysis
@@ -446,6 +471,485 @@ class MainWindow(QMainWindow):
         df = pd.read_csv(self.project.path_result_main + '/Summary.csv')
         model = toolbox.PandasModel(df)
         self.window.LipoAssay_resultTable.setModel(model)
+
+
+    # Super-resolution Anlaysis
+    def _updateSRPreviousReconstructionAttempts(self):
+        """
+        This function updates the items in SupRes_previousReconstructionAttemptSelector, by listing all the directories parallel to the data path.
+        """
+        previous_reconstruction_attempts = [i for i in os.listdir(os.path.dirname(self.data_path)) if os.path.isdir(os.path.join(os.path.dirname(self.data_path), i))] # Find all previous reconstruction attempts and only keep folders
+        previous_reconstruction_attempts.remove(os.path.basename(self.data_path)) # Remove original path from the list
+        if len(previous_reconstruction_attempts) != 0:
+            self.updateLog(str(len(previous_reconstruction_attempts)) + ' previous attempts are found.')
+            self.previous_reconstruction_attempts = dict() # attempt name: attempt folder path
+            # Clear the combo box and create items for each attempt
+            self.window.SupRes_previousReconstructionAttemptSelector.clear()
+            self.window.SupRes_previousReconstructionAttemptSelector.addItem("New")
+            for i in previous_reconstruction_attempts:
+                self.previous_reconstruction_attempts[i] = os.path.join(os.path.dirname(self.data_path), i).replace('\\', '/')
+                self.window.SupRes_previousReconstructionAttemptSelector.addItem(i)
+            self.window.SupRes_previousReconstructionAttemptSelector.setCurrentIndex(self.window.SupRes_previousReconstructionAttemptSelector.count() - 1) # Set the latest item as selection
+        else:
+            self.updateLog('No previous reconstruction attempt found for this data.')
+
+
+    def clickLoadSRPreviousAttempts(self):
+        # Check if data path exists
+        data_path = self.window.SupRes_pathEntry.text()
+        if os.path.isdir(data_path) == False:
+            self.showMessage('w', 'Path to folder not found.')
+            return 0
+        else:
+            self.data_path = data_path.replace('\\', '/')
+            self.window.SupRes_pathEntry.setText(self.data_path)
+            self.updateLog('Loading previous attempts from ' + self.data_path)
+
+        if self.data_path.endswith('/'):
+            self.data_path = self.data_path[:-1]
+
+        self._updateSRPreviousReconstructionAttempts()
+
+
+    def _updateSRPreviousCorrectionAttempts(self):
+        """
+        This function updates the items in SupRes_previousCorrectionAttemptsSelector, by listing all the directories present in the result path.
+        """
+        selected_attempt = self.window.SupRes_previousReconstructionAttemptSelector.currentText()
+        previous_drift_attempts = [i for i in os.listdir(self.previous_reconstruction_attempts[selected_attempt]) if os.path.isdir(os.path.join(self.previous_reconstruction_attempts[selected_attempt], i))] # Only keep folders
+
+        if len(previous_drift_attempts) != 0:
+            self.window.SupRes_previousCorrectionAttemptsSelector.setEnabled(True)
+            self.updateLog(str(len(previous_drift_attempts)) + ' previous drift correction attempts were found for this reconstruction attempt.')
+            self.previous_drift_attempts = dict() # attempt name: attempt folder path
+            # Clear the combo box and create items for each attempt
+            self.window.SupRes_previousCorrectionAttemptsSelector.clear()
+            for i in previous_drift_attempts:
+                self.previous_drift_attempts[i] = os.path.join(os.path.join(os.path.dirname(self.data_path), selected_attempt), i).replace('\\', '/')
+                self.window.SupRes_previousCorrectionAttemptsSelector.addItem(i)
+            self.window.SupRes_previousCorrectionAttemptsSelector.setCurrentIndex(self.window.SupRes_previousCorrectionAttemptsSelector.count() - 1) # Set the latest item as selection
+        else:
+            pass
+
+
+    def _SRPreviousReconstructionAttemptSelected(self):
+        selected_attempt = self.window.SupRes_previousReconstructionAttemptSelector.currentText()
+
+        # Check if the parameter log for the previous attempt is available
+        try:
+            with open(os.path.join(self.previous_reconstruction_attempts[selected_attempt], 'parameters.txt'), 'r') as js_file:
+                self.SRparameters = json.load(js_file)
+        except FileNotFoundError:
+            self.showMessage('w', 'Parameter info for selected attempt not found. Default parameters used.')
+            return 0
+        except KeyError:
+            self.window.SupRes_runFidCorrButton.setEnabled(False)
+            self.window.SupRes_previousCorrectionAttemptsSelector.clear()
+            self.window.SupRes_previousCorrectionAttemptsSelector.setEnabled(False)
+            return 1
+
+
+        ind = self.window.SupRes_methodSelector.findText(self.SRparameters['method'])
+        if ind >= 0:
+            self.window.SupRes_methodSelector.setCurrentIndex(ind)
+
+        if self.SRparameters['method'] == 'ThunderSTORM':
+            self.window.SupRes_QEEntry.setText(str(self.SRparameters['quantum_efficiency']))
+
+        self.window.SupRes_PixelSizeEntry.setText(str(self.SRparameters['pixel_size']))
+        self.window.SupRes_CamBiasEntry.setText(str(self.SRparameters['camera_bias']))
+        self.window.SupRes_CamGainEntry.setText(str(self.SRparameters['camera_gain']))
+        self.window.SupRes_ExpTimeEntry.setText(str(self.SRparameters['exposure_time']))
+        self.window.SupRes_SRScaleEntry.setText(str(self.SRparameters['scale']))
+
+        self.window.SupRes_runFidCorrButton.setEnabled(True)
+
+        self._createSRProject()
+        self._updateSRPreviousCorrectionAttempts()
+
+        return 1
+
+
+    def _SRPreviousCorrectionAttemptSelected(self):
+        selected_attempt = self.window.SupRes_previousCorrectionAttemptsSelector.currentText()
+
+        try:
+            self.project.path_result_fid = self.previous_drift_attempts[selected_attempt]
+        except KeyError:
+            pass
+        
+        if selected_attempt == 'raw':
+            ind = self.window.SupRes_FidCorrMethodSelector.findText('')
+            self.window.SupRes_FidCorrMethodSelector.setCurrentIndex(ind)
+            return 1
+        else:
+            correction_info = selected_attempt.split('_')
+            if correction_info[0] == 'ThunderSTORM':
+                if correction_info[1] == 'CrossCorrelation':
+                    ind = self.window.SupRes_FidCorrMethodSelector.findText('Cross-correlation - ThunderSTORM')
+                    self.window.SupRes_FidCorrMethodSelector.setCurrentIndex(ind)
+                    self.window.SupRes_FidCorrParaEntry1.setText(correction_info[2])
+                    self.window.SupRes_FidCorrParaEntry2.setText(correction_info[3])
+                    return 1
+                elif correction_info[1] == 'FidMarker':
+                    ind = self.window.SupRes_FidCorrMethodSelector.findText('Fiducial marker - ThunderSTORM')
+                    self.window.SupRes_FidCorrMethodSelector.setCurrentIndex(ind)
+                    self.window.SupRes_FidCorrParaEntry1.setText(correction_info[2])
+                    self.window.SupRes_FidCorrParaEntry2.setText(correction_info[3])
+                    return 1
+                else:
+                    pass # Space for other drift correction methods
+            else:
+                pass
+
+
+    def _SRClusteringDBSCANSelection(self):
+        if self.window.SupRes_DBSCANCheck.isChecked():
+            self.window.SupRes_runClusteringButton.setEnabled(True)
+            self.window.SupRes_EPSLabel.setEnabled(True)
+            self.window.SupRes_EPSEntry.setEnabled(True)
+            self.window.SupRes_minSampleLabel.setEnabled(True)
+            self.window.SupRes_minSampleEntry.setEnabled(True)
+
+            self.window.SupRes_filteringCheck.setEnabled(True)
+        else:
+            self.window.SupRes_runClusteringButton.setEnabled(False)
+            self.window.SupRes_EPSLabel.setEnabled(False)
+            self.window.SupRes_EPSEntry.setEnabled(False)
+            self.window.SupRes_minSampleLabel.setEnabled(False)
+            self.window.SupRes_minSampleEntry.setEnabled(False)
+
+            self.window.SupRes_filteringCheck.setChecked(False)
+            self.window.SupRes_filteringCheck.setEnabled(False)
+
+
+    def _SRClusteringFilteringSelection(self):
+        if self.window.SupRes_filteringCheck.isChecked():
+            self.window.SupRes_precisionLabel.setEnabled(True)
+            self.window.SupRes_precisionEntry.setEnabled(True)
+            self.window.SupRes_sigmaLabel.setEnabled(True)
+            self.window.SupRes_sigmaEntry.setEnabled(True)
+        else:
+            self.window.SupRes_precisionLabel.setEnabled(False)
+            self.window.SupRes_precisionEntry.setEnabled(False)
+            self.window.SupRes_sigmaLabel.setEnabled(False)
+            self.window.SupRes_sigmaEntry.setEnabled(False)
+
+
+    def _methodOptSR(self):
+        """
+        Block/Release parameter entry when a method is selected
+        Change the options for fiducial correction for different reconstruction method
+        """
+        GDSC_fid_corr_methods = ['', 'Fiducial marker - ThunderSTORM', 'Cross-correlation - ThunderSTORM'] # The methods listed will be deleted when ThunderSTROM is selected ##'Auto fiducial
+        ThunderSTORM_fid_corr_methods = ['', 'Fiducial marker - ThunderSTORM', 'Cross-correlation - ThunderSTORM']
+
+        if self.window.SupRes_methodSelector.currentText() == 'GDSC SMLM 1':
+            self.window.SupRes_QELabel.setEnabled(False)
+            self.window.SupRes_QEEntry.setEnabled(False)
+            self.window.SupRes_FidCorrMethodSelector.clear()
+            for i in GDSC_fid_corr_methods:
+                self.window.SupRes_FidCorrMethodSelector.addItem(i)
+
+        elif self.window.SupRes_methodSelector.currentText() == 'ThunderSTORM':
+            self.window.SupRes_QELabel.setEnabled(True)
+            self.window.SupRes_QEEntry.setEnabled(True)
+            self.window.SupRes_FidCorrMethodSelector.clear()
+            for i in ThunderSTORM_fid_corr_methods:
+                self.window.SupRes_FidCorrMethodSelector.addItem(i)
+
+
+    def _methodOptSRFidCorr(self):
+        """
+        Change the parameter required for fiducial correction methods.
+        """
+        if self.window.SupRes_FidCorrMethodSelector.currentText() == '':
+            self.window.SupRes_FidCorrParaLabel1.setEnabled(False)
+            self.window.SupRes_FidCorrParaLabel2.setEnabled(False)
+            self.window.SupRes_FidCorrParaEntry1.setEnabled(False)
+            self.window.SupRes_FidCorrParaEntry2.setEnabled(False)
+        else:
+            self.window.SupRes_FidCorrParaLabel1.setEnabled(True)
+            self.window.SupRes_FidCorrParaLabel2.setEnabled(True)
+            self.window.SupRes_FidCorrParaEntry1.setEnabled(True)
+            self.window.SupRes_FidCorrParaEntry2.setEnabled(True)
+
+            if self.window.SupRes_FidCorrMethodSelector.currentText() == 'Auto fiducial':
+                self.window.SupRes_FidCorrParaLabel1.setText('Brightness')
+                self.window.SupRes_FidCorrParaLabel2.setText('Last Time/frames')
+                self.window.SupRes_FidCorrParaEntry1.setText('10000')
+                self.window.SupRes_FidCorrParaEntry2.setText('500')
+            elif self.window.SupRes_FidCorrMethodSelector.currentText() == 'Fiducial marker - ThunderSTORM':
+                self.window.SupRes_FidCorrParaLabel1.setText('Max distance/nm')
+                self.window.SupRes_FidCorrParaLabel2.setText('Min visibility ratio')
+                self.window.SupRes_FidCorrParaEntry1.setText('40.0')
+                self.window.SupRes_FidCorrParaEntry2.setText('0.1')
+            elif self.window.SupRes_FidCorrMethodSelector.currentText() == 'Cross-correlation - ThunderSTORM':
+                self.window.SupRes_FidCorrParaLabel1.setText('Bin size')
+                self.window.SupRes_FidCorrParaLabel2.setText('Magnification')
+                self.window.SupRes_FidCorrParaEntry1.setText('10')
+                self.window.SupRes_FidCorrParaEntry2.setText('5.0')
+
+
+    def clickSRRun(self):
+        guard = self._checkSRParameters()
+        if guard == 1:
+            self._createSRProject()
+            self._runSRReconstruction()
+
+
+    def clickSRfidCorr(self):
+        if  self.window.SupRes_FidCorrMethodSelector.currentText() == '':
+            self.showMessage('w', 'No drift correction method was selected.')
+        else:
+            guard = self._checkSRParameters()
+            if guard == 1:
+                self._createSRProject()
+                self._runSRFidCorr()
+
+
+    def clickSRClustering(self):
+        guard = self._checkSRParameters()
+        if guard == 1:
+            self._runClustering()
+
+
+    def _checkSRParameters(self):
+        # Check if data path exists
+        data_path = self.window.SupRes_pathEntry.text()
+        if os.path.isdir(data_path) == False:
+            self.showMessage('w', 'Path to folder not found.')
+            return 0
+        else:
+            self.data_path = data_path.replace('\\', '/')
+            self.window.SupRes_pathEntry.setText(self.data_path)
+            self.updateLog('Data path set to ' + self.data_path)
+
+        try: # Obtain methods and reconstruction parameters from UI
+            self.SRparameters = {
+            'method' : self.window.SupRes_methodSelector.currentText(),
+            'pixel_size' : float(self.window.SupRes_PixelSizeEntry.text()),
+            'camera_bias' : float(self.window.SupRes_CamBiasEntry.text()),
+            'camera_gain' : float(self.window.SupRes_CamGainEntry.text()),
+            'exposure_time' : float(self.window.SupRes_ExpTimeEntry.text()),
+            'scale' : float(self.window.SupRes_SRScaleEntry.text()),
+            'fid_method' : self.window.SupRes_FidCorrMethodSelector.currentText(),
+            'signal_strength' : 40,
+            'precision': 20.0,
+            'min_photons': 0,
+            'smoothing_factor': 0.25
+            }
+            if self.SRparameters['method'] == 'ThunderSTORM': # Quantum efficiency is solely required for ThunderSTORM
+                self.SRparameters['quantum_efficiency'] = float(self.window.SupRes_QEEntry.text())
+
+            # Obtain the corresponding parameters for the drift correction method selected
+            if self.SRparameters['fid_method'] == 'Auto fiducial':
+                self.SRparameters['fid_brightness'] = float(self.window.SupRes_FidCorrParaEntry1.text())
+                self.SRparameters['fid_time'] = float(self.window.SupRes_FidCorrParaEntry2.text())
+            elif self.SRparameters['fid_method'] == 'Fiducial marker - ThunderSTORM':
+                self.SRparameters['max_distance'] = float(self.window.SupRes_FidCorrParaEntry1.text())
+                self.SRparameters['min_visibility'] = float(self.window.SupRes_FidCorrParaEntry2.text())
+            elif self.SRparameters['fid_method'] == 'Cross-correlation - ThunderSTORM':
+                self.SRparameters['bin_size'] = int(self.window.SupRes_FidCorrParaEntry1.text())
+                self.SRparameters['magnification'] = float(self.window.SupRes_FidCorrParaEntry2.text())
+            else:
+                pass
+
+            if self.window.SupRes_filteringCheck.isChecked(): # Obtain parameters for data filtering if the method is required
+                self.SRparameters['filter'] = {
+                "precision": float(self.window.SupRes_precisionEntry.text()), # in nm
+                "sigma": float(self.window.SupRes_sigmaEntry.text()) # in pixel
+                }
+            if self.window.SupRes_DBSCANCheck.isChecked():# Obtain parameters for DBSCAN if the method is required
+                self.SRparameters['DBSCAN'] = {
+                "eps": float(self.window.SupRes_EPSEntry.text()), # in nm
+                "min_sample": float(self.window.SupRes_minSampleEntry.text())
+                }
+
+        except ValueError:
+            self.showMessage('w', 'The parameters must be numbers.')
+            return 0
+
+        self.project.update_parameters(self.SRparameters)
+        return 1
+
+
+    def _createSRProject(self):
+        selected_attempt = self.window.SupRes_previousReconstructionAttemptSelector.currentText()
+        if selected_attempt != "New":
+            self.project = SuperResAnalysis(self.data_path) # Create project for super resolution analysis
+            self.project.path_result_main = self.previous_reconstruction_attempts[selected_attempt]
+            self.project.path_result_raw = self.project.path_result_main + '/raw'
+            return 1
+        else:
+            self.project = SuperResAnalysis(self.data_path) # Create project for super resolution analysis
+            if self.project.error != 1:
+                self.showMessage('c', self.project.error)
+                return 0
+            else:
+                return 1
+
+
+    def _runSRReconstruction(self):
+        self.initialiseProgress('Reconstructing SR images...', len(self.project.fov_paths))
+        # Create a QThread object
+        self.SRThread = QThread()
+        # Create a worker object
+        self.SRWorker = toolbox.SRWorker('Reconstruction', self.project, self.IJ)
+
+        # Connect signals and slots
+        self.SRThread.started.connect(self.SRWorker.run)
+        self.SRWorker.finished.connect(self.SRThread.quit)
+        self.SRWorker.finished.connect(self.SRWorker.deleteLater)
+        self.SRThread.finished.connect(self.SRThread.deleteLater)
+        # Move worker to the thread
+        self.SRWorker.moveToThread(self.SRThread)
+        # Connect progress signal to GUI
+        self.SRWorker.progress.connect(self.updateProgress)
+        # Start the thread
+        self.SRThread.start()
+        self.updateLog('Starting reconstruction...')
+        
+        # UI response
+        self.window.SupRes_runReconstructionButton.setEnabled(False) # Block 'Run Reconstruction' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runReconstructionButton.setEnabled(True) # Reset 'Run Reconstruction' button
+            )
+        self.window.SupRes_loadButton.setEnabled(False) # Block 'Load' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_loadButton.setEnabled(True) # Reset 'Load' button
+            )
+        self.window.SupRes_runFidCorrButton.setEnabled(False) # Block 'Run Fiducial Correction' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runFidCorrButton.setEnabled(True) # Enable 'Run fiducial correction' button
+            )
+        self.window.SupRes_runClusteringButton.setEnabled(False) # Block 'Run Clustering' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runClusteringButton.setEnabled(True) # Reset 'Run Clustering' button
+            )
+        self.SRThread.finished.connect(
+            lambda: self._updateSRPreviousReconstructionAttempts() # Refresh previous reconstruction attempt list
+            )
+        # Passing next job
+        self.SRThread.finished.connect(
+            lambda: self.updateLog('Reconstruction completed.')
+            )
+        self.SRThread.finished.connect(
+            lambda: self.restProgress()
+            ) # Reset progress bar to rest
+        if self.SRparameters['fid_method'] == '': # if no fid method selected, skip. Otherwise trigger drift correction
+            pass 
+        else:
+            try:
+                self.SRThread.finished.connect(
+                    lambda: self._runSRFidCorr()
+                    ) 
+            except:
+                print(sys.exc_info())
+
+
+    def _runSRFidCorr(self):
+        self.initialiseProgress('Drift correcting...', len(self.project.fov_paths))
+        # Create a QThread object
+        self.SRThread = QThread()
+        # Create a worker object
+        self.SRWorker = toolbox.SRWorker('FiducialCorrection', self.project, self.IJ)
+
+        # Connect signals and slots
+        self.SRThread.started.connect(self.SRWorker.run)
+        self.SRWorker.finished.connect(self.SRThread.quit)
+        self.SRWorker.finished.connect(self.SRWorker.deleteLater)
+        self.SRThread.finished.connect(self.SRThread.deleteLater)
+        # Move worker to the thread
+        self.SRWorker.moveToThread(self.SRThread)
+        # Connect progress signal to GUI
+        self.SRWorker.progress.connect(self.updateProgress)
+        # Start the thread
+        self.SRThread.start()
+        self.updateLog('Starting drift correction by ' + self.SRparameters['fid_method'] + '...')
+        
+        # UI response
+        self.window.SupRes_runReconstructionButton.setEnabled(False) # Block 'Run Reconstruction' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runReconstructionButton.setEnabled(True) # Reset 'Run Reconstruction' button
+            )
+        self.window.SupRes_loadButton.setEnabled(False) # Block 'Load' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_loadButton.setEnabled(True) # Reset 'Load' button
+            )
+        self.window.SupRes_runFidCorrButton.setEnabled(False) # Block 'Run Fiducial Correction' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runFidCorrButton.setEnabled(True) # Reset 'Fiducial Correction' button
+            )
+        self.window.SupRes_runClusteringButton.setEnabled(False) # Block 'Run Clustering' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runClusteringButton.setEnabled(True) # Reset 'Run Clustering' button
+            )
+        self.SRThread.finished.connect(
+            lambda: self._updateSRPreviousCorrectionAttempts# Add work to attempt list
+            )
+        # Passing next job
+        self.SRThread.finished.connect(
+            lambda: self.updateLog('Drift correction completed.')
+            )
+        self.SRThread.finished.connect(
+            lambda: self.restProgress()
+            ) # Reset progress bar to rest
+        if 'DBSCAN' not in self.SRparameters.keys():
+            pass 
+        else:
+            try:
+                self.SRThread.finished.connect(
+                    lambda: self._runClustering()
+                    ) 
+            except:
+                print(sys.exc_info())
+
+
+    def _runClustering(self):
+        self.initialiseProgress('Analysing clusters...', len(self.project.fov_paths))
+        # Create a QThread object
+        self.SRThread = QThread()
+        # Create a worker object
+        self.SRWorker = toolbox.SRWorker('Clustering', self.project, self.IJ)
+
+        # Connect signals and slots
+        self.SRThread.started.connect(self.SRWorker.run)
+        self.SRWorker.finished.connect(self.SRThread.quit)
+        self.SRWorker.finished.connect(self.SRWorker.deleteLater)
+        self.SRThread.finished.connect(self.SRThread.deleteLater)
+        # Move worker to the thread
+        self.SRWorker.moveToThread(self.SRThread)
+        # Connect progress signal to GUI
+        self.SRWorker.progress.connect(self.updateProgress)
+        # Start the thread
+        self.SRThread.start()
+        self.updateLog('Starting cluster analysis with DBSCAN...')
+        
+        # UI response
+        self.window.SupRes_runReconstructionButton.setEnabled(False) # Block 'Run Reconstruction' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runReconstructionButton.setEnabled(True) # Reset 'Run Reconstruction' button
+            )
+        self.window.SupRes_loadButton.setEnabled(False) # Block 'Load' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_loadButton.setEnabled(True) # Reset 'Load' button
+            )
+        self.window.SupRes_runFidCorrButton.setEnabled(False) # Block 'Run Fiducial Correction' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runFidCorrButton.setEnabled(True) # Reset 'Fiducial Correction' button
+            )
+        self.window.SupRes_runClusteringButton.setEnabled(False) # Block 'Run Clustering' button
+        self.SRThread.finished.connect(
+            lambda: self.window.SupRes_runClusteringButton.setEnabled(True) # Reset 'Run Clustering' button
+            )
+        # Passing next job
+        self.SRThread.finished.connect(
+            lambda: self.updateLog('Cluster analysis completed.')
+            )
+        self.SRThread.finished.connect(
+            lambda: self.restProgress()
+            ) # Reset progress bar to rest
 
 
     # Help informations

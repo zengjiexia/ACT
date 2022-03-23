@@ -74,19 +74,18 @@ class DFLParticleFinder(QObject):
     def run(self):
         if self.algorithm == 'ComDet':
             try:
-                self.project.call_ComDet(self.size, self.threshold, progress_signal=self.progress, IJ=self.IJ)
+                self.project.call_ComDet(size = self.size, threshold = self.threshold, progress_signal=self.progress, IJ=self.IJ)
             except:
                 print(sys.exc_info())
         elif self.algorithm == 'Trevor':
             try:
-                self.project.call_Trevor(self.size, self.threshold, progress_signal=self.progress)
+                self.project.call_Trevor(erode_size = self.size, bg_thres = self.threshold, progress_signal=self.progress)
             except:
                 print(sys.exc_info())
         else:
             pass
 
         self.finished.emit()
-
 
 
 class ReportWriter(QObject):
@@ -106,7 +105,6 @@ class ReportWriter(QObject):
             print(sys.exc_info())
 
         self.finished.emit()
-
 
 
 class LipoAssayWorker(QObject):
@@ -130,3 +128,32 @@ class LipoAssayWorker(QObject):
         self.finished.emit()
 
 
+class SRWorker(QObject):
+    finished = Signal()
+    progress = Signal(int)
+
+    def __init__(self, job, project, IJ):
+        super().__init__()
+
+        self.job = job
+        self.project = project
+        self.IJ = IJ
+
+    @QtCore.Slot()
+    def run(self):
+        if self.job == 'Reconstruction':
+            try:
+                self.project.superRes_reconstruction(progress_signal=self.progress, IJ=self.IJ)
+            except:
+                print(sys.exc_info())
+        elif self.job == 'FiducialCorrection':
+            try:
+                self.project.superRes_fiducialCorrection(progress_signal=self.progress, IJ=self.IJ)
+            except:
+                print(sys.exc_info())
+        elif self.job == 'Clustering':
+            try:
+                self.project.superRes_clustering(progress_signal=self.progress)
+            except:
+                print(sys.exc_info())
+        self.finished.emit()

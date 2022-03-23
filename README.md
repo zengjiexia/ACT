@@ -6,9 +6,9 @@ A platform for the rapid analysis of both diffraction-limited and single-molecul
 
 Applications
 ------------
-- Diffraction-Limited Analysis (DFLSP)
+- Diffraction-Limited Analysis
 	
-	This program is intended for rapid analysis of diffraction-limited images, to distinguish the protein aggregates (or other targets) captured by the SiMPull surface. The analysis process can also be used for other diffraction-limited images.
+	This program is intended for the rapid analysis of diffraction-limited images generated under fluorescence microscope. It is capable of distinguishing and characterising the protein aggregates (or other targets) captured on surface. 
 	
 	Two methods are available:
 		
@@ -17,12 +17,20 @@ Applications
 	2. Trevor - A pure python alternative for the ComDet. (Written by Yunzhao Wu)
 	
 	An advanced thresholding method, Orthogonal Analysis, is provided. It can help you to distinguish the actual particles detected from the backgroud noises by setting a threshold based on the 'intensity per area' distribution of the spots.
+	
+
+- Super-resolution Image Analysis
+	
+	Super-resolution images are stack of images taken when the fluorescent indicator being constantly bound and dissociated from the targets captured on the surface. This feature provides two image reconstruction methods - [GDSC SMLM 1](https://gdsc-smlm.readthedocs.io/en/latest/) and [ThunderSTORM](https://zitmen.github.io/thunderstorm/) to track the fluorescent spot through the stack and reconstruct into a image with higher resolution than diffraction limit.
+
+	After image reconstruction, drift correction and particle clustering methods are also provided in the program, allowing you to further characterise the targets detected.
 
 
 - Liposome Assay Analysis
 
-	This workflow is the improved version of [Calcium Influx Assay](https://github.com/zengjiexia/CalciumInfluxAssay). It is an automated analysis program for [Ultrasensitive Measurement of Ca2+ Influx into Lipid Vesicles Induced by Protein Aggregates](https://doi.org/10.1002/anie.201700966) developed in the Klenerman Group. 
-	
+	This workflow is the improved version of [Calcium Influx Assay](https://github.com/zengjiexia/CalciumInfluxAssay). It is an automated analysis program for [Ultrasensitive Measurement of Ca2+ Influx into Lipid Vesicles Induced by Protein Aggregates](https://doi.org/10.1002/anie.201700966) developed at the Klenerman Group. 
+
+
 
 Requirements
 ------------
@@ -31,6 +39,7 @@ Requirements
 	- os
 	- sys
 	- re
+	- datatime
 	- [opencv - 4.1.2.30](https://pypi.org/project/opencv-contrib-python/)
 	- [tqdm - 4.60.0](https://pypi.org/project/tqdm/)
 	- [astropy - 4.0.2](https://www.astropy.org/)
@@ -39,8 +48,9 @@ Requirements
 	- [numpy](https://numpy.org/)
 	- [math](https://docs.python.org/3/library/math.html)
 	- [tifffile](https://pypi.org/project/tifffile/)
-	- [pandas - 0.25.3](https://pandas.pydata.org/)
+	- [pandas - 1.4.1](https://pandas.pydata.org/)
 	- [scikit-image - 0.17.2](https://scikit-image.org/)
+	- [scikit-learn - 0.24.2](https://scikit-learn.org/)
 	- [PySide 6 - 6.0.2](https://pypi.org/project/PySide6/)
 	- [pyqtgraph](https://github.com/pyqtgraph/pyqtgraph)(Included locally)
 	- [pathos](https://pypi.org/project/pathos/)
@@ -50,6 +60,8 @@ Requirements
 
 - [Fiji(is just imagej)](https://imagej.net/Fiji) 
 	- [ComDet](https://github.com/ekatrukha/ComDet)
+	- [GDSC SMLM 1](https://gdsc-smlm.readthedocs.io/en/latest/)
+	- [ThunderSTORM](https://zitmen.github.io/thunderstorm/)
 
 
 Installation
