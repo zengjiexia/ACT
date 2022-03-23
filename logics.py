@@ -968,10 +968,18 @@ class SuperResAnalysis:
     def _cluster_DBSCAN(self, field_name):
         # The result files are named differently for drift corrected and uncorrected data
         if self.path_result_fid.endswith('raw'):
-            df = pd.read_csv(os.path.join(self.path_result_fid, field_name+'_results.csv'))
+            file_dir = os.path.join(self.path_result_fid, field_name+'_results.csv')
         else:
-            df = pd.read_csv(os.path.join(self.path_result_fid, field_name+'_corrected.csv'))
+            file_dir = os.path.join(self.path_result_fid, field_name+'_corrected.csv')
 
+        # Using  filtered data for clustering
+        try:
+            filters = self.parameters['filter']
+            file_dir = file_dir.replace('.csv', '_filter_'+str(paras['precision'])+'_'+str(paras['sigma'])+'.csv')
+        except KeyError:
+            pass
+
+        df = pd.read_csv(file_dir)
         # The coordinates for localisations are in pixel for GDSC results and nm for TS results. This step unifies the unit to nm.
         if self.parameters['method'] == 'GDSC SMLM 1':
             df['x [nm]'] = df['X'] * self.parameters['pixel_size']

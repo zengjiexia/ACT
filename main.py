@@ -137,6 +137,7 @@ class MainWindow(QMainWindow):
         data_path = QFileDialog.getExistingDirectory(parent=self.window, caption='Browse path for data.', dir=os.path.dirname(__file__))
         self.window.DFLSP_pathEntry.setText(data_path)
         self.window.LipoAssay_pathEntry.setText(data_path)
+        self.window.SupRes_pathEntry.setText(data_path)
         #* set all paths
 
     # Diffraction Limited SiMPull Analysis
