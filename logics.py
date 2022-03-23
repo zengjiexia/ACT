@@ -245,10 +245,14 @@ class SimPullAnalysis:
                                 break
             
                 return output
+
+            pad = np.zeros([img_size[0]+8, img_size[1]+8])
+            pad[4:img_size[0]+4, 4:img_size[1]+4] = tophat_img
+            pad_img = np.copy(pad)
             output = convolve2D(tophat_img, ricker_2d_kernel, padding=0)
             out_img = Image.fromarray(output)
             out_resize = out_img.resize(img_size)
-            out_array = np.array(out_resize) 
+            out_array = np.array(out_resize)
             mu,sigma = norm.fit(out_array)
             threshold = mu + bg_thres*sigma
             out_array[out_array<threshold] = 0
@@ -257,7 +261,10 @@ class SimPullAnalysis:
             dilate_img = dilation(erode_img, disk(erode_size))
             dilate_img[dilate_img>0] = 1
             mask = np.copy(dilate_img)
-            
+            mask[0:5, :] = 0
+            mask[-5:, :] = 0
+            mask[:, 0:5] = 0
+            mask[:, -5:] = 0
             io.imsave(saveto + '.tif', mask) # save masked image as result
             
             inverse_mask = 1-mask
@@ -304,20 +311,20 @@ class SimPullAnalysis:
             df['IntegratedInt'] = intensity_list
             df.to_csv(saveto + '_results.csv', index=False) # save result.csv
 
+
         img_index = list(range(len(workload)))
-        partial_func = partial(process_img, fov_paths=self.fov_paths, path_result_raw = self.path_result_raw, workload =workload)
+        partial_func = partial(process_img, fov_paths=self.fov_paths, path_result_raw=self.path_result_raw, workload=workload)
         
         pool = Pool(num_workers)
         pool.map(partial_func, img_index)
         pool.close()
         pool.join()
-
+  
         if progress_signal == None:
             pass
         else:
             c += 1
             progress_signal.emit(c)
-            
         return 1
 
 
@@ -592,24 +599,20 @@ class LiposomeAssayAnalysis:
                 log_signal.emit(text)
 
 
-        if progress_signal == None: #i.e. running in non-GUI mode
-            workload = tqdm(sorted(self.samples)) # using tqdm as progress bar in cmd
-        else:
-            workload = sorted(self.samples)
-            c = 0 # progress indicator
+        def process_img(img_index, workload, threshold):
 
-        for sample in workload:
+            sample = workload[img_index]
             sample_summary = pd.DataFrame()
 
             # report which sample is running to log window
-            pass_log('Running sample: ' + sample)
+            #pass_log('Running sample: ' + sample)
             
             ionomycin_path = os.path.join(sample, 'Ionomycin')
             sample_path = os.path.join(sample, 'Sample')
             blank_path = os.path.join(sample, 'Blank')
 
-            if not os.path.isdir(ionomycin_path):
-                pass_log('Skip ' + sample + '. No data found in the sample folder.')
+            #if not os.path.isdir(ionomycin_path):
+                #pass_log('Skip ' + sample + '. No data found in the sample folder.')
 
             ### Obtain filenames for fields of view ###
             field_names = extract_filename(ionomycin_path)
@@ -627,7 +630,7 @@ class LiposomeAssayAnalysis:
                 peaks = peak_locating(ionomycin_mean, threshold)
                 
                 if len(peaks) == 0:
-                    pass_log('Field ' + field + ' of sample ' + sample +' ignored due to no liposome located in this FoV.')
+                    #pass_log('Field ' + field + ' of sample ' + sample +' ignored due to no liposome located in this FoV.')
                     field_summary = pd.DataFrame({
                         "FoV": [field],
                         "Mean influx": [0],
@@ -649,13 +652,35 @@ class LiposomeAssayAnalysis:
                     field_result.to_csv(os.path.join(sample.replace(self.path_data_main, self.path_result_raw), field+".csv"))
 
                     sample_summary = pd.concat([sample_summary, field_summary])
-
-            # Report progress
-            if progress_signal != None:
-                c += 1
-                progress_signal.emit(c)
-
             sample_summary.to_csv(sample.replace(self.path_data_main, self.path_result_raw) + ".csv")
+
+
+
+        if progress_signal == None: #i.e. running in non-GUI mode
+            workload = tqdm(sorted(self.samples)) # using tqdm as progress bar in cmd
+        else:
+            workload = sorted(self.samples)
+            c = 0 # progress indicator
+
+        num_cpu = multiprocessing.cpu_count()
+        ram = psutil.virtual_memory().available
+        estimated_cores = int(np.round(ram/1024/1024/1024/2))
+        num_workers = np.minimum(num_cpu, estimated_cores)
+
+        img_index = list(range(len(workload)))
+        partial_func = partial(process_img, workload =workload, threshold=threshold)
+
+        pool = Pool(num_workers)
+        pool.map(partial_func, img_index)
+        pool.close()
+        pool.join()
+
+        # Report progress
+        if progress_signal != None:
+            c += 1
+            progress_signal.emit(c)
+
+        return 1
 
 
     def generate_reports(self, progress_signal=None):
@@ -1055,7 +1080,6 @@ class SuperResAnalysis:
                 progress_signal.emit(c)
 
         return 1
-
 
 
 
