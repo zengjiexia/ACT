@@ -975,14 +975,21 @@ class SuperResAnalysis:
         df = pd.read_csv(file_dir)
 
         # Filter spots based on chosen parameters
-        # For GDSC, sigma-SD, precision-Precisions
+        # For GDSC, sigma-SD, precision-Precisions (for 2D images, X SD = Y SD)
         # For ThunderSTORM, sigma-sigma, precision-uncertainty
         if self.parameters['method'] == 'GDSC SMLM 1':
             df = df.loc[df['X SD'] <= paras['sigma']]
             df = df.loc[df['Precisions (nm)'] <= paras['precision']]
+            df = df.loc[df['Frame'] >= paras['keepFrom']]
+            if paras['keepTo'] != 0:
+                df.loc[df['Frame'] <= paras['keepTo']]
+
         elif self.parameters['method'] == 'ThunderSTORM':
             df = df.loc[df['sigma [nm]'] <= paras['sigma']*self.parameters['pixel_size']]
             df = df.loc[df['uncertainty_xy [nm]'] <= paras['precision']]
+            df = df.loc[df['frame'] >= paras['keepFrom']]
+            if paras['keepTo'] != 0:
+                df.loc[df['frame'] <= paras['keepTo']]
 
         df = df.reset_index(drop=True)
         df.to_csv(file_dir.replace('.csv', '_filter_'+str(paras['precision'])+'_'+str(paras['sigma'])+'.csv')) # File naming: filter_precision_sigma
@@ -1003,8 +1010,13 @@ class SuperResAnalysis:
             file_dir = file_dir.replace('.csv', '_filter_'+str(paras['precision'])+'_'+str(paras['sigma'])+'.csv')
         except KeyError:
             pass
+            
+        try:
+            df = pd.read_csv(file_dir)
+        except EmptyDataError:
+            print('No localisation in the data.')
+            return 0
 
-        df = pd.read_csv(file_dir)
         # The coordinates for localisations are in pixel for GDSC results and nm for TS results. This step unifies the unit to nm.
         if self.parameters['method'] == 'GDSC SMLM 1':
             df['x [nm]'] = df['X'] * self.parameters['pixel_size']

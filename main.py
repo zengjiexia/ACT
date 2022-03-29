@@ -629,11 +629,19 @@ class MainWindow(QMainWindow):
             self.window.SupRes_precisionEntry.setEnabled(True)
             self.window.SupRes_sigmaLabel.setEnabled(True)
             self.window.SupRes_sigmaEntry.setEnabled(True)
+            self.window.SupRes_keepFrameFromLabel.setEnabled(True)
+            self.window.SupRes_keepFrameFromEntry.setEnabled(True)
+            self.window.SupRes_keepFrameToLabel.setEnabled(True)
+            self.window.SupRes_keepFrameToEntry.setEnabled(True)
         else:
             self.window.SupRes_precisionLabel.setEnabled(False)
             self.window.SupRes_precisionEntry.setEnabled(False)
             self.window.SupRes_sigmaLabel.setEnabled(False)
             self.window.SupRes_sigmaEntry.setEnabled(False)
+            self.window.SupRes_keepFrameFromLabel.setEnabled(False)
+            self.window.SupRes_keepFrameFromEntry.setEnabled(False)
+            self.window.SupRes_keepFrameToLabel.setEnabled(False)
+            self.window.SupRes_keepFrameToEntry.setEnabled(False)
 
 
     def _methodOptSR(self):
@@ -758,7 +766,9 @@ class MainWindow(QMainWindow):
             if self.window.SupRes_filteringCheck.isChecked(): # Obtain parameters for data filtering if the method is required
                 self.SRparameters['filter'] = {
                 "precision": float(self.window.SupRes_precisionEntry.text()), # in nm
-                "sigma": float(self.window.SupRes_sigmaEntry.text()) # in pixel
+                "sigma": float(self.window.SupRes_sigmaEntry.text()), # in pixel
+                "keepFrom": float(self.window.SupRes_keepFrameFromEntry.text()),
+                "keepTo": float(self.window.SupRes_keepFrameToEntry.text())
                 }
             if self.window.SupRes_DBSCANCheck.isChecked():# Obtain parameters for DBSCAN if the method is required
                 self.SRparameters['DBSCAN'] = {
