@@ -700,9 +700,9 @@ class MainWindow(QMainWindow):
 
 
     def clickSRRun(self):
+        self._createSRProject()
         guard = self._checkSRParameters()
         if guard == 1:
-            self._createSRProject()
             self._runSRReconstruction()
 
 
@@ -710,9 +710,10 @@ class MainWindow(QMainWindow):
         if  self.window.SupRes_FidCorrMethodSelector.currentText() == '':
             self.showMessage('w', 'No drift correction method was selected.')
         else:
+            self._createSRProject()
             guard = self._checkSRParameters()
             if guard == 1:
-                self._createSRProject()
+                
                 self._runSRFidCorr()
 
 
@@ -792,7 +793,7 @@ class MainWindow(QMainWindow):
             self.project.path_result_raw = self.project.path_result_main + '/raw'
             return 1
         else:
-            self.project = SuperResAnalysis(self.data_path) # Create project for super resolution analysis
+            self.project = SuperResAnalysis(self.window.SupRes_pathEntry.text()) # Create project for super resolution analysis
             if self.project.error != 1:
                 self.showMessage('c', self.project.error)
                 return 0

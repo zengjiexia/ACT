@@ -1007,7 +1007,7 @@ class SuperResAnalysis:
         # Using  filtered data for clustering
         try:
             filters = self.parameters['filter']
-            file_dir = file_dir.replace('.csv', '_filter_'+str(paras['precision'])+'_'+str(paras['sigma'])+'.csv')
+            file_dir = file_dir.replace('.csv', '_filter_'+str(filters['precision'])+'_'+str(filters['sigma'])+'.csv')
         except KeyError:
             pass
             
@@ -1050,9 +1050,9 @@ class SuperResAnalysis:
 
         # Cluster profiling
         placeholder = pd.DataFrame({
-            'X_mag': np.tile(range(0, self.img_shape[1] * self.parameters['scale']), self.img_shape[2] * self.parameters['scale']), 
+            'X_mag': np.tile(range(0, self.dimensions[0] * self.parameters['scale']), self.dimensions[1] * self.parameters['scale']), 
             # Repeat x coordinates y times
-            'Y_mag': np.repeat(range(0, self.img_shape[2] * self.parameters['scale']), self.img_shape[1] * self.parameters['scale'])
+            'Y_mag': np.repeat(range(0, self.dimensions[1] * self.parameters['scale']), self.dimensions[0] * self.parameters['scale'])
             # Repeat y coordinates x times
         }) # Creates a dataframe contains all the pixel localisations
         
@@ -1099,8 +1099,8 @@ if __name__ == "__main__":
 
     #path = input('Please input the path for analysis:\n')
     #if os.path.isdir(path) != True:
-    #	print('Please input valid directory for data.')
-    #	quit()
+    #   print('Please input valid directory for data.')
+    #   quit()
     project = SuperResAnalysis(r"D:\Work\Supres_test\Sample", {'method': 'GDSC SMLM 1'})
     #print('Launching: ' + path)
     #size = input('Please input the estimated size of particles(in pixels):\n')
