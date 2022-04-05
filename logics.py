@@ -834,6 +834,7 @@ class SuperResAnalysis:
             else:
                 c += 1
                 progress_signal.emit(c)
+
         return 1
 
 
@@ -962,6 +963,7 @@ class SuperResAnalysis:
             else:
                 c += 1
                 progress_signal.emit(c)
+
         return 1
 
 
@@ -979,7 +981,7 @@ class SuperResAnalysis:
         # For ThunderSTORM, sigma-sigma, precision-uncertainty
         if self.parameters['method'] == 'GDSC SMLM 1':
             df = df.loc[df['X SD'] <= paras['sigma']]
-            df = df.loc[df['Precisions (nm)'] <= paras['precision']]
+            df = df.loc[df['Precision (nm)'] <= paras['precision']]
             df = df.loc[df['Frame'] >= paras['keepFrom']]
             if paras['keepTo'] != 0:
                 df.loc[df['Frame'] <= paras['keepTo']]
@@ -1013,7 +1015,7 @@ class SuperResAnalysis:
             
         try:
             df = pd.read_csv(file_dir)
-        except EmptyDataError:
+        except pd.errors.EmptyDataError:
             print('No localisation in the data.')
             return 0
 
@@ -1038,15 +1040,16 @@ class SuperResAnalysis:
         # Remove localisations labelled as noise from the df
         cleaned_df = labelled_df.copy()
         cleaned_df = labelled_df[labelled_df.DBSCAN_label != -1]
-        # Save cleaned localisation file
-        cleaned_df.to_csv(os.path.join(self.path_result_fid, field_name+'_clustered.csv'))
+
+        # Save cleaned cluster localisation file
+        cleaned_df.to_csv(os.path.join(self.path_result_fid, field_name+'_clustered_' + str(self.parameters['DBSCAN']['eps']) + '_' + str(self.parameters['DBSCAN']['min_sample']) + '.csv'))
 
         cleaned_labels = labels.copy()
         cleaned_labels = cleaned_labels[cleaned_labels != -1]
 
         # Magnify the coordinates
-        df['X_mag'] = (df['X'] * self.parameters['scale']).astype(np.uint16)
-        df['Y_mag'] = (df['Y'] * self.parameters['scale']).astype(np.uint16)
+        cleaned_df['X_mag'] = (cleaned_df['X'] * self.parameters['scale']).astype('int16')
+        cleaned_df['Y_mag'] = (cleaned_df['Y'] * self.parameters['scale']).astype('int16')
 
         # Cluster profiling
         placeholder = pd.DataFrame({
@@ -1055,17 +1058,33 @@ class SuperResAnalysis:
             'Y_mag': np.repeat(range(0, self.dimensions[1] * self.parameters['scale']), self.dimensions[0] * self.parameters['scale'])
             # Repeat y coordinates x times
         }) # Creates a dataframe contains all the pixel localisations
-        
+
         cluster_df = cleaned_df.copy()
-        cluster_df['DBSCAN_label'] += 1 # Change label 0 to 1
-        cluster_df = pd.concat([cluster_df, placeholder], axis=0, join='outer') # Combine placeholder with actual dataframe
+        cluster_df['DBSCAN_label'] += 1 # Change label from 0-based to 1-based
+        cluster_df = pd.concat([cluster_df, placeholder], axis=0, join='outer', sort=False) # Combine placeholder with actual dataframe
         cluster_df = pd.pivot_table(cluster_df, values='DBSCAN_label', index=['Y_mag'], columns=['X_mag'], aggfunc='max', fill_value=0) # Convert coordinate dataframe to array-like dataframe with index as Y, column as X, value as cluster label
-        cluster_img = cluster_df.to_numpy()
+
+        cluster_img = cluster_df.to_numpy() # convert pivot table to numpy array
+
         cluster_profile = regionprops_table(cluster_img, properties=['label', 'area', 'centroid', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity','bbox'])
         cluster_profile = pd.DataFrame(cluster_profile)
-        cluster_profile.columns(['cluster_id', 'no_localisation', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax'])
-        cluster_profile.to_csv(os.path.join(self.path_result_fid, field_name+'_clusterProfile.csv'))
+        cluster_profile.columns = ['cluster_id', 'no_localisation', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax']
+
+        # Save cluster profile file
+        cluster_profile.to_csv(os.path.join(self.path_result_fid, field_name+'_clusterProfile_' + str(self.parameters['DBSCAN']['eps']) + '_' + str(self.parameters['DBSCAN']['min_sample']) + '.csv'))
+
+        summary = cluster_profile.agg({
+            'cluster_id': 'max',
+            'no_localisation': ['max', 'min', 'mean'],
+            'convex_area': ['max', 'min', 'mean'],
+            'major_axis_length' : ['max', 'min', 'mean'],
+            'eccentricity': ['max', 'min', 'mean']
+        })
+        summary.at['max', 'n_noise'] = n_noise
+
+        summary.to_csv(os.path.join(self.path_result_fid, field_name+'_Summary_' + str(self.parameters['DBSCAN']['eps']) + '_' + str(self.parameters['DBSCAN']['min_sample']) + '.csv'))
         return 1
+
 
 
     def superRes_clustering(self, progress_signal=None):

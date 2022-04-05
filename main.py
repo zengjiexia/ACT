@@ -508,6 +508,7 @@ class MainWindow(QMainWindow):
         if self.data_path.endswith('/'):
             self.data_path = self.data_path[:-1]
 
+        self._createSRProject()
         self._updateSRPreviousReconstructionAttempts()
 
 
@@ -534,38 +535,46 @@ class MainWindow(QMainWindow):
 
     def _SRPreviousReconstructionAttemptSelected(self):
         selected_attempt = self.window.SupRes_previousReconstructionAttemptSelector.currentText()
+        if selected_attempt == '':
+            pass # avoid KeyError triggered when clearing combobox
+        elif selected_attempt != "New":
+             # Create project for super resolution analysis
+            self.project.path_result_main = self.previous_reconstruction_attempts[selected_attempt]
+            self.project.path_result_raw = self.project.path_result_main + '/raw'
 
-        # Check if the parameter log for the previous attempt is available
-        try:
-            with open(os.path.join(self.previous_reconstruction_attempts[selected_attempt], 'parameters.txt'), 'r') as js_file:
-                self.SRparameters = json.load(js_file)
-        except FileNotFoundError:
-            self.showMessage('w', 'Parameter info for selected attempt not found. Default parameters used.')
-            return 0
-        except KeyError:
-            self.window.SupRes_runFidCorrButton.setEnabled(False)
-            self.window.SupRes_previousCorrectionAttemptsSelector.clear()
-            self.window.SupRes_previousCorrectionAttemptsSelector.setEnabled(False)
-            return 1
+            # Check if the parameter log for the previous attempt is available
+            try:
+                with open(os.path.join(self.previous_reconstruction_attempts[selected_attempt], 'parameters.txt'), 'r') as js_file:
+                    self.SRparameters = json.load(js_file)
+            except FileNotFoundError:
+                self.showMessage('w', 'Parameter info for selected attempt not found. Default parameters used.')
+                return 0
+            except KeyError:
+                self.window.SupRes_runFidCorrButton.setEnabled(False)
+                self.window.SupRes_previousCorrectionAttemptsSelector.clear()
+                self.window.SupRes_previousCorrectionAttemptsSelector.setEnabled(False)
+                return 1
 
 
-        ind = self.window.SupRes_methodSelector.findText(self.SRparameters['method'])
-        if ind >= 0:
-            self.window.SupRes_methodSelector.setCurrentIndex(ind)
+            ind = self.window.SupRes_methodSelector.findText(self.SRparameters['method'])
+            if ind >= 0:
+                self.window.SupRes_methodSelector.setCurrentIndex(ind)
 
-        if self.SRparameters['method'] == 'ThunderSTORM':
-            self.window.SupRes_QEEntry.setText(str(self.SRparameters['quantum_efficiency']))
+            if self.SRparameters['method'] == 'ThunderSTORM':
+                self.window.SupRes_QEEntry.setText(str(self.SRparameters['quantum_efficiency']))
 
-        self.window.SupRes_PixelSizeEntry.setText(str(self.SRparameters['pixel_size']))
-        self.window.SupRes_CamBiasEntry.setText(str(self.SRparameters['camera_bias']))
-        self.window.SupRes_CamGainEntry.setText(str(self.SRparameters['camera_gain']))
-        self.window.SupRes_ExpTimeEntry.setText(str(self.SRparameters['exposure_time']))
-        self.window.SupRes_SRScaleEntry.setText(str(self.SRparameters['scale']))
+            self.window.SupRes_PixelSizeEntry.setText(str(self.SRparameters['pixel_size']))
+            self.window.SupRes_CamBiasEntry.setText(str(self.SRparameters['camera_bias']))
+            self.window.SupRes_CamGainEntry.setText(str(self.SRparameters['camera_gain']))
+            self.window.SupRes_ExpTimeEntry.setText(str(self.SRparameters['exposure_time']))
+            self.window.SupRes_SRScaleEntry.setText(str(self.SRparameters['scale']))
 
-        self.window.SupRes_runFidCorrButton.setEnabled(True)
+            self.window.SupRes_runFidCorrButton.setEnabled(True)
 
-        self._createSRProject()
-        self._updateSRPreviousCorrectionAttempts()
+
+            self._updateSRPreviousCorrectionAttempts()
+        else: 
+            pass
 
         return 1
 
@@ -710,7 +719,6 @@ class MainWindow(QMainWindow):
         if  self.window.SupRes_FidCorrMethodSelector.currentText() == '':
             self.showMessage('w', 'No drift correction method was selected.')
         else:
-            self._createSRProject()
             guard = self._checkSRParameters()
             if guard == 1:
                 
@@ -741,7 +749,7 @@ class MainWindow(QMainWindow):
             'camera_bias' : float(self.window.SupRes_CamBiasEntry.text()),
             'camera_gain' : float(self.window.SupRes_CamGainEntry.text()),
             'exposure_time' : float(self.window.SupRes_ExpTimeEntry.text()),
-            'scale' : float(self.window.SupRes_SRScaleEntry.text()),
+            'scale' : int(round(float(self.window.SupRes_SRScaleEntry.text()))),
             'fid_method' : self.window.SupRes_FidCorrMethodSelector.currentText(),
             'signal_strength' : 40,
             'precision': 20.0,
@@ -774,7 +782,7 @@ class MainWindow(QMainWindow):
             if self.window.SupRes_DBSCANCheck.isChecked():# Obtain parameters for DBSCAN if the method is required
                 self.SRparameters['DBSCAN'] = {
                 "eps": float(self.window.SupRes_EPSEntry.text()), # in nm
-                "min_sample": float(self.window.SupRes_minSampleEntry.text())
+                "min_sample": int(round(float(self.window.SupRes_minSampleEntry.text())))
                 }
 
         except ValueError:
@@ -782,24 +790,18 @@ class MainWindow(QMainWindow):
             return 0
 
         self.project.update_parameters(self.SRparameters)
+
         return 1
 
 
     def _createSRProject(self):
-        selected_attempt = self.window.SupRes_previousReconstructionAttemptSelector.currentText()
-        if selected_attempt != "New":
-            self.project = SuperResAnalysis(self.data_path) # Create project for super resolution analysis
-            self.project.path_result_main = self.previous_reconstruction_attempts[selected_attempt]
-            self.project.path_result_raw = self.project.path_result_main + '/raw'
-            return 1
+        self.project = SuperResAnalysis(self.window.SupRes_pathEntry.text()) # Create project for super resolution analysis
+        if self.project.error != 1:
+            self.showMessage('c', self.project.error)
+            return 0
         else:
-            self.project = SuperResAnalysis(self.window.SupRes_pathEntry.text()) # Create project for super resolution analysis
-            if self.project.error != 1:
-                self.showMessage('c', self.project.error)
-                return 0
-            else:
-                return 1
-
+            return 1
+            
 
     def _runSRReconstruction(self):
         self.initialiseProgress('Reconstructing SR images...', len(self.project.fov_paths))
