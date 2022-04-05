@@ -799,7 +799,7 @@ class SuperResAnalysis:
         self.timeStamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         self.path_result_main = (self.path_data_main + '_' + self.timeStamp + '_' + self.parameters['method'])
         self.path_result_main = self.path_result_main.replace("\\", "/") # fiji only reads path with /
-        self.path_result_main = self.path_result_main.replace(" ", "_") # fiji only reads path with /
+        #self.path_result_main = self.path_result_main.replace(" ", "_") # fiji only reads path with /
         if os.path.isdir(self.path_result_main) != 1:
             os.mkdir(self.path_result_main)
         self.path_result_raw = os.path.join(self.path_result_main, 'raw')
