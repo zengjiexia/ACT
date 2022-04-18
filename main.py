@@ -1271,16 +1271,43 @@ class OrthogonalAnalysisPopup(QWidget):
         thred_path = self.parent.project.path_result_main + '/Thred_results'
         if os.path.isdir(thred_path) != True:
             os.mkdir(thred_path)
-        rm_list = ['FoV', 'NArea', 'IntegratedInt', 'IntPerArea']
-        keep_list = list(self.thresholded_df.columns.difference(rm_list)) # get list of conditions
-        output_df = self.thresholded_df.groupby(keep_list+ ['FoV']).size()
-        output_df = output_df.reset_index(drop=False)
-        output_df = output_df.groupby(keep_list).mean()
-        output_df = output_df.reset_index(drop=False)
-        output_df = output_df.rename(columns={0: "ParticlePerFoV"})
+
+        property_list = ['FoV', 'NArea', 'IntegratedInt', 'IntPerArea']
+        condition_list = list(self.thresholded_df.columns.difference(rm_list)) # get list of conditions
+
+        # Count the number of particles per FoV
+        ParticlePerFoV_df = thresholded_df.groupby(['Well','FoV']).size() 
+        ParticlePerFoV_df = ParticlePerFoV_df.reset_index(drop=False)
+        
+        # Calculate the mean particle per FoV for each well
+        PPF_mean_df = ParticlePerFoV_df.groupby(['Well']).mean() 
+        PPF_mean_df = PPF_mean_df.reset_index(drop=False)
+        PPF_mean_df = PPF_mean_df.rename(columns={0: "ParticlePerFoV"})
+
+        # Calculate the mean of each property for each sample
+        property_mean_df = thresholded_df.groupby(condition_list).mean()
+        property_mean_df = property_mean_df.reset_index(drop=False)
+
+        # Left join two mean dfs
+        output_df = property_mean_df.merge(PPF_mean_df, on='Well', how='left')
+
+        # FoV contribution calculation
+        PPF_sum_df = ParticlePerFoV_df.groupby(['Well']).sum()
+        PPF_sum_df = PPF_sum_df.reset_index(drop=False)
+        PPF_sum_df = PPF_sum_df.rename(columns={0: "TotalParticleCounts"})
+        contrib_df = ParticlePerFoV_df.merge(PPF_sum_df, on='Well', how='right')
+        contrib_df['Contribution'] = contrib_df[0] / contrib_df['TotalParticleCounts']
+        contrib_df['FoV'] = contrib_df.apply(lambda x: x['FoV'].replace(x['Well'], ''), axis=1)
+        contrib_df = contrib_df.pivot(index='Well', columns='FoV', values='Contribution')
+        contrib_df = contrib_df.fillna(0)
+        contrib_df = contrib_df.reset_index(drop=False)
+
+        # Left join the output with FoV contributions
+        output_df = output_df.merge(contrib_df, on='Well', how='left')
 
         output_df['thred_IntPerArea'] = self.window.oa_intperareaPlotLine.value()
         output_df['thred_NArea'] = self.window.oa_nareaPlotLine.value()
+
         output_df.to_csv(thred_path + '/' + self.task  + '.csv')
         self.parent.updateLog('Thresholded result saved as ' + thred_path + '/' + self.task  + '.csv.')
         try:
