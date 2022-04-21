@@ -984,14 +984,14 @@ class SuperResAnalysis:
             df = df.loc[df['Precision (nm)'] <= paras['precision']]
             df = df.loc[df['Frame'] >= paras['keepFrom']]
             if paras['keepTo'] != 0:
-                df.loc[df['Frame'] <= paras['keepTo']]
+                df = df.loc[df['Frame'] <= paras['keepTo']]
 
         elif self.parameters['method'] == 'ThunderSTORM':
             df = df.loc[df['sigma [nm]'] <= paras['sigma']*self.parameters['pixel_size']]
             df = df.loc[df['uncertainty_xy [nm]'] <= paras['precision']]
             df = df.loc[df['frame'] >= paras['keepFrom']]
             if paras['keepTo'] != 0:
-                df.loc[df['frame'] <= paras['keepTo']]
+                df = df.loc[df['frame'] <= paras['keepTo']]
 
         df = df.reset_index(drop=True)
         df.to_csv(file_dir.replace('.csv', '_filter_'+str(paras['precision'])+'_'+str(paras['sigma'])+'.csv')) # File naming: filter_precision_sigma

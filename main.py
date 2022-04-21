@@ -1273,10 +1273,10 @@ class OrthogonalAnalysisPopup(QWidget):
             os.mkdir(thred_path)
 
         property_list = ['FoV', 'NArea', 'IntegratedInt', 'IntPerArea']
-        condition_list = list(self.thresholded_df.columns.difference(rm_list)) # get list of conditions
+        condition_list = list(self.thresholded_df.columns.difference(property_list)) # get list of conditions
 
         # Count the number of particles per FoV
-        ParticlePerFoV_df = thresholded_df.groupby(['Well','FoV']).size() 
+        ParticlePerFoV_df = self.thresholded_df.groupby(['Well','FoV']).size() 
         ParticlePerFoV_df = ParticlePerFoV_df.reset_index(drop=False)
         
         # Calculate the mean particle per FoV for each well
@@ -1285,7 +1285,7 @@ class OrthogonalAnalysisPopup(QWidget):
         PPF_mean_df = PPF_mean_df.rename(columns={0: "ParticlePerFoV"})
 
         # Calculate the mean of each property for each sample
-        property_mean_df = thresholded_df.groupby(condition_list).mean()
+        property_mean_df = self.thresholded_df.groupby(condition_list).mean()
         property_mean_df = property_mean_df.reset_index(drop=False)
 
         # Left join two mean dfs
