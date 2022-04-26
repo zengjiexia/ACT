@@ -705,7 +705,7 @@ class MainWindow(QMainWindow):
                 self.window.SupRes_FidCorrParaLabel1.setText('Bin size')
                 self.window.SupRes_FidCorrParaLabel2.setText('Magnification')
                 self.window.SupRes_FidCorrParaEntry1.setText('10')
-                self.window.SupRes_FidCorrParaEntry2.setText('5.0')
+                self.window.SupRes_FidCorrParaEntry2.setText('8.0')
 
 
     def clickSRRun(self):
