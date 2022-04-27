@@ -1,3 +1,3 @@
 {
-    "files": ["TagDataPopup.ui","OrthogonalAnalysisPopup.ui","MainWindow.ui","GroupingPopup.ui","lulu.jpg"]
+    "files": ["OrthogonalAnalysisPopup.ui","MainWindow.ui","lulu.jpg","GroupingPopup.ui","TagDataPopup.ui","FolderSpliter.ui"]
 }

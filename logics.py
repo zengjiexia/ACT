@@ -895,7 +895,8 @@ class SuperResAnalysis:
     def _fidCorr_TS_crossCorrelation(self, field_name, IJ=None):
         if self.parameters['method'] == 'ThunderSTORM':
             self.macro = """
-            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=false rawimagestack= startingframe=1 append=false");
+            run("Visualization", "imleft=0.0 imtop=0.0 imwidth="""+str(self.dimensions[0])+""" imheight="""+str(self.dimensions[1])+""" renderer=[Averaged shifted histograms] magnification="""+str(self.parameters['scale'])+""" colorize=false threed=false shifts=2");
             run("Show results table", "action=drift magnification="""+str(self.parameters['magnification'])+""" method=[Cross correlation] ccsmoothingbandwidth=0.25 save=false steps="""+str(self.parameters['bin_size'])+""" showcorrelations=false");
             run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
             selectWindow("Averaged shifted histograms");
@@ -910,7 +911,8 @@ class SuperResAnalysis:
         elif self.parameters['method'] == 'GDSC SMLM 1':
             self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv") # Convert the GDSC result to TS format and save as _TS.csv
             self.macro = """
-            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results_TS.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results_TS.csv fileformat=[CSV (comma separated)] livepreview=false rawimagestack= startingframe=1 append=false");
+            run("Visualization", "imleft=0.0 imtop=0.0 imwidth="""+str(self.dimensions[0])+""" imheight="""+str(self.dimensions[1])+""" renderer=[Averaged shifted histograms] magnification="""+str(self.parameters['scale'])+""" colorize=false threed=false shifts=2");
             run("Show results table", "action=drift magnification="""+str(self.parameters['magnification'])+""" method=[Cross correlation] ccsmoothingbandwidth=0.25 save=false steps="""+str(self.parameters['bin_size'])+""" showcorrelations=false");
             run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected_TS.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
             selectWindow("Averaged shifted histograms");
@@ -1027,10 +1029,21 @@ class SuperResAnalysis:
             df['X'] = df['x [nm]'] / self.parameters['pixel_size']
             df['Y'] = df['y [nm]'] / self.parameters['pixel_size']
 
-        clustering = DBSCAN(eps=self.parameters['DBSCAN']['eps'] , min_samples=self.parameters['DBSCAN']['min_sample']).fit(df[['x [nm]', 'y [nm]']])
+        try:
+            clustering = DBSCAN(eps=self.parameters['DBSCAN']['eps'] , min_samples=self.parameters['DBSCAN']['min_sample']).fit(df[['x [nm]', 'y [nm]']])
+        except ValueError:
+            print('Not enough localisations for DBSCAN.')
+            report = pd.DataFrame({
+                'FoV': [field_name],
+                'n_clusters': [0],
+                'cluster_localisations': [0],
+                'n_noise': [0],
+                'total_localisations': [0]
+            })
+            return report
 
         labels = list(clustering.labels_)
-        n_clusters = len(labels) - (1 if -1 in labels else 0)
+        n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
         n_noise = labels.count(-1)
 
         # Label the localisations in the df with cluster ids
@@ -1099,7 +1112,10 @@ class SuperResAnalysis:
         report = pd.DataFrame({
             'FoV': [field_name],
             'n_clusters': summary.at['max', 'cluster_id'],
-            'cluster_localisations': summary.at['max', 'cluster_id'] * summary.at['mean', 'n_localisations'],
+            'mean_localisation_per_cluster': summary.at['mean', 'n_localisations'],
+            'mean_convex_area_per_cluster': summary.at['mean', 'convex_area'],
+            'mean_eccentricity': summary.at['mean', 'eccentricity'],
+            'total_cluster_localisations': summary.at['max', 'cluster_id'] * summary.at['mean', 'n_localisations'],
             'n_noise': n_noise,
             'total_localisations': summary.at['max', 'cluster_id'] * summary.at['mean', 'n_localisations'] + n_noise
             })

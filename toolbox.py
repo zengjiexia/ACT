@@ -77,7 +77,7 @@ class DFLParticleFinder(QObject):
                 self.project.call_ComDet(size = self.size, threshold = self.threshold, progress_signal=self.progress, IJ=self.IJ)
             except:
                 print(sys.exc_info())
-        elif self.algorithm == 'Trevor':
+        elif self.algorithm == 'PyStar':
             try:
                 self.project.call_Trevor(erode_size = self.size, bg_thres = self.threshold, progress_signal=self.progress)
             except:

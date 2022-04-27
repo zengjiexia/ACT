@@ -149,7 +149,7 @@
          </item>
          <item>
           <property name="text">
-           <string>Trevor</string>
+           <string>PyStar</string>
           </property>
          </item>
         </widget>
@@ -1039,7 +1039,7 @@
   </action>
   <action name="actionTrevor">
    <property name="text">
-    <string>Trevor</string>
+    <string>PyStar</string>
    </property>
   </action>
   <action name="actionProgram_frozen">

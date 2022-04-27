@@ -479,6 +479,7 @@ class MainWindow(QMainWindow):
         This function updates the items in SupRes_previousReconstructionAttemptSelector, by listing all the directories parallel to the data path.
         """
         previous_reconstruction_attempts = [i for i in os.listdir(os.path.dirname(self.data_path)) if os.path.isdir(os.path.join(os.path.dirname(self.data_path), i))] # Find all previous reconstruction attempts and only keep folders
+        previous_reconstruction_attempts = [i for i in previous_reconstruction_attempts if i.startswith(os.path.basename(self.data_path))] # Remove unrelated folders
         previous_reconstruction_attempts.remove(os.path.basename(self.data_path)) # Remove original path from the list
         if len(previous_reconstruction_attempts) != 0:
             self.updateLog(str(len(previous_reconstruction_attempts)) + ' previous attempts are found.')
@@ -1319,6 +1320,22 @@ class OrthogonalAnalysisPopup(QWidget):
     def cancel(self):
         self.finished.emit()
 
+
+
+# Plugins
+class SplitFolderPopup(QWidget):
+    def __init__(self, parent=None):
+        self.parent = parent
+
+        try:
+            self.mainWindow = self.parent.window
+        except AttributeError:
+            self.mainWindow = None
+        super(OrthogonalAnalysisPopup, self).__init__(parent=self.mainWindow)
+        self.loadUI()
+
+    def loadUI(self):
+        pass
 
 
 if __name__ == "__main__":
