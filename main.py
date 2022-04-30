@@ -1,8 +1,9 @@
 import sys
 import os
+import shutil
 
 import PySide6
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QMessageBox, QProgressDialog, QFileDialog, QVBoxLayout, QRadioButton, QButtonGroup
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QMessageBox, QProgressDialog, QFileDialog, QVBoxLayout, QGridLayout, QRadioButton, QButtonGroup, QLabel, QLineEdit
 from PySide6.QtCore import QFile, QIODevice, Slot, Qt, QThread, Signal, QRect
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtGui import QIcon
@@ -50,7 +51,7 @@ class MainWindow(QMainWindow):
         # Menu
             # File
         self.window.actionLoad.triggered.connect(self.loadDataPath)
-            # Tools
+            # Analysis
                 # DFL
         self.window.actionRun_analysis_DFLSP.triggered.connect(self.clickDFLSPRun)
         self.window.actionGenerate_reports_DFLSP.triggered.connect(self.clickDFLSPGenerateReports)
@@ -62,6 +63,9 @@ class MainWindow(QMainWindow):
         self.window.actionRun_reconstruction_SR.triggered.connect(self.clickSRRun)
         self.window.actionRun_drift_correction_SR.triggered.connect(self.clickSRfidCorr)
         self.window.actionRun_clustering_SR.triggered.connect(self.clickSRClustering)
+            # Tools
+                # Folder Splitter
+        self.window.actionFolder_Splitter.triggered.connect(self.clickFolderSplitter)
 
             # Help
         self.window.actionComDet.triggered.connect(self.helpComDet)
@@ -1000,6 +1004,11 @@ Please contact Ron Xia (zx252@cam.ac.uk) if you keep having this problem. This i
             """)
 
 
+    def clickFolderSplitter(self):
+        self.folderSplitterPopup = SplitFolderPopup(parent=self)
+        self.folderSplitterPopup.window.show()
+        self.folderSplitterPopup.finished.connect(self.folderSplitterPopup.window.close)
+
 # Supporting widgets
 class TagDataPopup(QWidget):
     finished = Signal()
@@ -1171,11 +1180,11 @@ class OrthogonalAnalysisPopup(QWidget):
         self.window = loader.load(ui_file, self.mainWindow)
         self.window.setWindowTitle('Orthogonal Analysis - ' + self.task)
 
-        self.window.oa_applyButton.clicked.connect(self.applyThresholds)
-        self.window.oa_defaultButton.clicked.connect(self.resetDefault)
-        self.window.oa_saveResultButton.clicked.connect(self.saveData)
-        self.window.oa_cancelButton.clicked.connect(self.cancel)
-        self.window.oa_plotSelector.currentIndexChanged.connect(self.applyThresholds)
+        self.window.oa_applyButton.clicked.connect(self._applyThresholds)
+        self.window.oa_defaultButton.clicked.connect(self._resetDefault)
+        self.window.oa_saveResultButton.clicked.connect(self._saveData)
+        self.window.oa_cancelButton.clicked.connect(self._cancel)
+        self.window.oa_plotSelector.currentIndexChanged.connect(self._applyThresholds)
 
         self._updateParticlePlot(self.org_df)
         self._plotIntnArea()
@@ -1254,19 +1263,19 @@ class OrthogonalAnalysisPopup(QWidget):
             plotHist(self.window.oa_nareaPlot, 'NArea', i, c)
         
 
-    def applyThresholds(self):
+    def _applyThresholds(self):
         self.thresholded_df = self.org_df.loc[self.org_df.IntPerArea >= self.window.oa_intperareaPlotLine.value()]
         self.thresholded_df = self.thresholded_df.loc[self.thresholded_df.NArea >= self.window.oa_nareaPlotLine.value()]
 
         self._updateParticlePlot(self.thresholded_df)
 
 
-    def resetDefault(self):
+    def _resetDefault(self):
         self.thresholded_df = self.org_df
         self._updateParticlePlot(self.org_df)
 
 
-    def saveData(self):
+    def _saveData(self):
         self.applyThresholds()
 
         thred_path = self.parent.project.path_result_main + '/Thred_results'
@@ -1317,13 +1326,14 @@ class OrthogonalAnalysisPopup(QWidget):
             print(sys.exc_info())
 
 
-    def cancel(self):
+    def _cancel(self):
         self.finished.emit()
 
 
 
 # Plugins
 class SplitFolderPopup(QWidget):
+    finished = Signal()
     def __init__(self, parent=None):
         self.parent = parent
 
@@ -1331,11 +1341,90 @@ class SplitFolderPopup(QWidget):
             self.mainWindow = self.parent.window
         except AttributeError:
             self.mainWindow = None
-        super(OrthogonalAnalysisPopup, self).__init__(parent=self.mainWindow)
+        super(SplitFolderPopup, self).__init__(parent=self.mainWindow)
         self.loadUI()
 
+
     def loadUI(self):
-        pass
+        path = os.path.join(os.path.dirname(__file__), "UI_form/FolderSplitter.ui")
+        ui_file = QFile(path)
+        if not ui_file.open(QIODevice.ReadOnly):
+            print(f"Cannot open {ui_file_name}: {ui_file.errorString()}")
+            sys.exit(-1)
+
+        loader = QUiLoader()
+        self.window = loader.load(ui_file, self.mainWindow)
+        self.window.buttonBox.button(self.window.buttonBox.Ok).clicked.connect(self._folderSplitter)
+        self.window.buttonBox.button(self.window.buttonBox.Cancel).clicked.connect(self._cancel)
+        self.window.moreConditionButton.clicked.connect(self._moreCondition)
+        self.window.conditionWidgetLayout = QGridLayout(self.window.conditionWidget)
+
+        self.conditionCount = 0 # initialise condition count
+        self._moreCondition()
+
+        ui_file.close()
+        if not self.window:
+            print(loader.errorString())
+            sys.exit(-1)
+
+
+    def _cancel(self):
+        self.finished.emit()
+
+
+    def _moreCondition(self):
+        if self.conditionCount == 0: # initiate condition box with two conditions
+            for i in range(0, 2):
+                self.window.conditionWidgetLayout.addWidget(QLabel(text='Condition ' + str(i), objectName='condition_' + str(i) + '_Label'), i, 0)
+                self.window.conditionWidgetLayout.addWidget(QLineEdit(objectName='condition_' + str(i)), i, 1)
+                self.window.conditionWidgetLayout.addWidget(QLabel(text='Identifier ' + str(i), objectName='identifier_' + str(i) + '_Label'), i, 2)
+                self.window.conditionWidgetLayout.addWidget(QLineEdit(objectName='identifier_' + str(i)), i, 3)
+            self.conditionCount = 2
+        else:
+            # add conditions
+            self.window.conditionWidgetLayout.addWidget(QLabel(text='Condition ' + str(self.conditionCount), objectName='condition_' + str(self.conditionCount) + '_Label'), self.conditionCount, 0)
+            self.window.conditionWidgetLayout.addWidget(QLineEdit(objectName='condition_' + str(self.conditionCount)), self.conditionCount, 1)
+            self.window.conditionWidgetLayout.addWidget(QLabel(text='Identifier ' + str(self.conditionCount), objectName='identifier_' + str(self.conditionCount) + '_Label'), self.conditionCount, 2)
+            self.window.conditionWidgetLayout.addWidget(QLineEdit(objectName='identifier_' + str(self.conditionCount)), self.conditionCount, 3)
+            self.conditionCount += 1
+
+
+    def _folderSplitter(self):
+        job_path = self.window.pathEntry.text()
+        if job_path == '':
+            msgBox = QMessageBox(self.mainWindow)
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setWindowTitle('Warning')
+            msgBox.setText('No path was specified.')
+            returnValue = msgBox.exec_()
+            return 0
+        elif os.path.isdir(job_path) != True:
+            msgBox = QMessageBox(self.mainWindow)
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setWindowTitle('Warning')
+            msgBox.setText('Path input was invalid.')
+            returnValue = msgBox.exec_()
+            return 0
+        else:
+            job_dict = {}
+            for i in range(0, self.conditionCount):
+                condition = self.window.findChild(QLineEdit, "condition_" + str(i)).text()
+                condition = condition.replace(" ", "")
+                if len(condition) != 0:
+                    identifier = self.window.findChild(QLineEdit, "identifier_" + str(i)).text()
+                    job_dict[identifier] = job_path + "_" + condition
+                    if os.path.isdir(job_dict[identifier]) == False:
+                        os.mkdir(job_dict[identifier])
+
+            for root, dirs, files in os.walk(job_path):
+                for f in files:
+                    for i in job_dict.keys():
+                        if i in f:
+                            shutil.move(os.path.join(root, f), os.path.join(job_dict[i], f))
+
+            self.finished.emit()
+            return 1
+
 
 
 if __name__ == "__main__":

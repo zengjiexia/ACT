@@ -1021,6 +1021,7 @@
     <property name="title">
      <string>Tools</string>
     </property>
+    <addaction name="actionFolder_Splitter"/>
    </widget>
    <addaction name="mainMenu"/>
    <addaction name="menuAnalysis"/>
@@ -1085,6 +1086,11 @@
   <action name="actionRun_clustering_SR">
    <property name="text">
     <string>Run clustering</string>
+   </property>
+  </action>
+  <action name="actionFolder_Splitter">
+   <property name="text">
+    <string>Folder Splitter</string>
    </property>
   </action>
  </widget>
