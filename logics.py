@@ -741,8 +741,11 @@ class SuperResAnalysis:
                     try:
                         pos = re.findall(r"X\dY\dR\dW\dC\d", file)[-1]
                     except IndexError:
-                        self.error = 'Error in the naming system of the images. Please make sure the image names contain coordinate in form of XnYnRnWnCn.'
-                        return 0
+                        try:
+                            pos = re.findall(r'X\dY\dR\dW\d', file)[-1]
+                        except IndexError:
+                            self.error = 'Error in the naming system of the images. Please make sure the image names contain coordinate in form of XnYnRnWnCn or XnYnRnWn.'
+                            return 0
                     self.fov_paths[pos] = os.path.join(root, file)
 
         self.wells = {} # dict - well name: list of FoV taken in the well

@@ -984,7 +984,7 @@ Please see https://github.com/ekatrukha/ComDet/wiki/How-does-detection-work%3F f
 
 
     def helpTrevor(self):
-        self.showMessage('i', r"""                                                      Trevor
+        self.showMessage('i', r"""                                                      PyStar
 Parameters:
     Threshold: Pick out pixels with intensities over (μ+threshold*σ). Recommended value of threshold is 1. Higher value results in fewer dots.
     Size: Size of erosion disk. The size has to be an integer. Recommended value is 2. Higher value results in fewer dots.
@@ -999,7 +999,7 @@ Image processing procedure:
 
     def helpFrozen(self):
         self.showMessage('i', r"""
-If you encountered program freezing with the progress bar reached 100%, please restart the program and re-run the step you got stuck with (from the Tools command list).
+If you encountered program freezing with the progress bar reached 100%, please restart the program and re-run the step you got stuck with (from the Analysis command list).
 Please contact Ron Xia (zx252@cam.ac.uk) if you keep having this problem. This is a known bug in the program which should be fixed in later releases. Thanks for your understanding.
             """)
 
