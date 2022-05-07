@@ -9,8 +9,9 @@ import math as ms
 import tifffile as tiff
 import imagej
 from skimage import io
-from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruction
+from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruction, skeletonize_3d, closing
 from skimage.measure import label, regionprops_table
+from sklearn.neighbors import NearestNeighbors
 from sklearn.cluster import DBSCAN
 from astropy.convolution import RickerWavelet2DKernel
 from PIL import Image
@@ -1084,9 +1085,38 @@ class SuperResAnalysis:
 
             cluster_img = cluster_df.to_numpy() # convert pivot table to numpy array
 
+            if self.parameters['length_calculation'] == True:
+                num_clus = np.max(cluster_img)
+                length_list = []
+                for i in range(1, num_clus+1):
+                    coor = np.where(cluster_img == i)
+                    coor0 = coor[0]-np.min(coor[0])
+                    coor1 = coor[1]-np.min(coor[1])
+                    clus_area = np.zeros((np.max(coor0)+1, np.max(coor1)+1))
+                    clus_area[(coor0, coor1)] = 1
+                    clus_area_close = closing(clus_area)
+                    clus_skele = skeletonize_3d(clus_area_close)
+                    xy = np.asarray(np.where(clus_skele)).T
+                    length = 0
+                    nbrs = NearestNeighbors(radius = 1.5, algorithm='auto').fit(xy)
+                    rng = nbrs.radius_neighbors(xy)
+                    for j in rng[0]:
+                        length += sum(j)
+                    length = length/2 + 1
+                    length_list.append(length)
+
+
             cluster_profile = regionprops_table(cluster_img, properties=['label', 'area', 'centroid', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity','bbox'])
+
+            if self.parameters['length_calculation'] == True:
+                cluster_profile['length'] = length_list
+
             cluster_profile = pd.DataFrame(cluster_profile)
-            cluster_profile.columns = ['cluster_id', 'n_localisations', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax']
+
+            if self.parameters['length_calculation'] == True:
+                cluster_profile.columns = ['cluster_id', 'n_localisations', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax', 'length']
+            else:
+                cluster_profile.columns = ['cluster_id', 'n_localisations', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax']
 
             # Save cluster profile file
             cluster_profile.to_csv(os.path.join(self.path_result_fid, field_name+'_clusterProfile_' + str(self.parameters['DBSCAN']['eps']) + '_' + str(self.parameters['DBSCAN']['min_sample']) + '.csv'))

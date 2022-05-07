@@ -91,6 +91,7 @@ class MainWindow(QMainWindow):
 
         self.window.SupRes_DBSCANCheck.stateChanged.connect(self._SRClusteringDBSCANSelection)
         self.window.SupRes_filteringCheck.stateChanged.connect(self._SRClusteringFilteringSelection)
+        self.window.SupRes_lengthCalCheck.stateChanged.connect(self._SRLengthCalSelection)
         self.window.SupRes_runClusteringButton.clicked.connect(self.clickSRClustering)
 
         ui_file.close()
@@ -626,6 +627,7 @@ class MainWindow(QMainWindow):
             self.window.SupRes_minSampleEntry.setEnabled(True)
 
             self.window.SupRes_filteringCheck.setEnabled(True)
+            self.window.SupRes_lengthCalCheck.setEnabled(True)
         else:
             self.window.SupRes_runClusteringButton.setEnabled(False)
             self.window.SupRes_EPSLabel.setEnabled(False)
@@ -635,6 +637,15 @@ class MainWindow(QMainWindow):
 
             self.window.SupRes_filteringCheck.setChecked(False)
             self.window.SupRes_filteringCheck.setEnabled(False)
+            self.window.SupRes_lengthCalCheck.setChecked(False)
+            self.window.SupRes_lengthCalCheck.setEnabled(False)
+
+
+    def _SRLengthCalSelection(self):
+        if self.window.SupRes_lengthCalCheck.isChecked():
+            self.showMessage('w', 'The cluster length calculation method is a beta feature. It might require a large amount of computational power and time. Please see the README on github for more information.')
+        else:
+            pass
 
 
     def _SRClusteringFilteringSelection(self):
@@ -789,6 +800,9 @@ class MainWindow(QMainWindow):
                 "eps": float(self.window.SupRes_EPSEntry.text()), # in nm
                 "min_sample": int(round(float(self.window.SupRes_minSampleEntry.text())))
                 }
+            if self.window.SupRes_lengthCalCheck.isChecked(): # Check if length calculation is required
+                self.SRparameters['length_calculation'] = True
+
 
         except ValueError:
             self.showMessage('w', 'The parameters must be numbers.')
@@ -1276,7 +1290,7 @@ class OrthogonalAnalysisPopup(QWidget):
 
 
     def _saveData(self):
-        self.applyThresholds()
+        self._applyThresholds()
 
         thred_path = self.parent.project.path_result_main + '/Thred_results'
         if os.path.isdir(thred_path) != True:
