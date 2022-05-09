@@ -249,7 +249,7 @@ class SimPullAnalysis:
             pad = np.zeros([img_size[0]+8, img_size[1]+8])
             pad[4:img_size[0]+4, 4:img_size[1]+4] = tophat_img
             pad_img = np.copy(pad)
-            output = convolve2D(tophat_img, ricker_2d_kernel, padding=0)
+            output = convolve2D(pad_img, ricker_2d_kernel, padding=0)
             out_img = Image.fromarray(output)
             out_resize = out_img.resize(img_size)
             out_array = np.array(out_resize)
