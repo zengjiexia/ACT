@@ -802,6 +802,8 @@ class MainWindow(QMainWindow):
                 }
             if self.window.SupRes_lengthCalCheck.isChecked(): # Check if length calculation is required
                 self.SRparameters['length_calculation'] = True
+            else:
+                self.SRparameters['length_calculation'] = False
 
 
         except ValueError:

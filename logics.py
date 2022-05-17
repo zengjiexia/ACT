@@ -56,34 +56,33 @@ class SimPullAnalysis:
             for file in files:
                 if file.endswith(".tif"):
                     try:
-                        pos = re.findall(r"X\dY\dR\dW\dC\d", file)[-1]
+                        pos = re.findall(r"X\d+Y\d+R\d+W\d+C\d+", file)[-1]
                         naming_system = 'XnYnRnWnCn'
                     except IndexError:
                         try:
-                            pos = re.findall(r'X\dY\dR\dW\d', file)[-1]
+                            pos = re.findall(r'X\d+Y\d+R\d+W\d+', file)[-1]
                             naming_system = 'XnYnRnWn'
                         except IndexError:
                             try:
-                                pos = re.findall(r'Pos\d', file)[-1]
+                                pos = re.findall(r'Pos\d+', file)[-1]
                                 naming_system = 'Posn'
                             except IndexError:
                                 return 0
                     self.fov_paths[pos] = os.path.join(root, file)
+
         self.wells = {} # dict - well name: list of FoV taken in the well
-        try:
-            list(self.fov_paths.keys())[0][7] # Check if the naming system is in 'pos\d'. IndexError would be raised if so.
-            pass
-        except IndexError:
+        if naming_system == 'Posn':
             for fov in self.fov_paths:
                 self.wells[fov] = [fov]
             return naming_system
-
-        for fov in self.fov_paths:
-            if fov[:4] in self.wells:
-                self.wells[fov[:4]] += [fov]
-            else:
-                self.wells[fov[:4]] = [fov]
-        return naming_system
+        else:
+            for fov in self.fov_paths:
+                well = re.findall(r"X\d+Y\d+", fov)[-1]
+                if well in self.wells:
+                    self.wells[well] += [fov]
+                else:
+                    self.wells[well] = [fov]
+            return naming_system
 
 
     def call_ComDet(self, size, threshold, progress_signal=None, IJ=None):
@@ -740,22 +739,23 @@ class SuperResAnalysis:
             for file in files:
                 if file.endswith(".tif"):
                     try:
-                        pos = re.findall(r"X\dY\dR\dW\dC\d", file)[-1]
+                        pos = re.findall(r"X\d+Y\d+R\d+W\d+C\d+", file)[-1]
                     except IndexError:
                         try:
-                            pos = re.findall(r'X\dY\dR\dW\d', file)[-1]
+                            pos = re.findall(r'X\d+Y\d+R\d+W\d+', file)[-1]
                         except IndexError:
                             self.error = 'Error in the naming system of the images. Please make sure the image names contain coordinate in form of XnYnRnWnCn or XnYnRnWn.'
                             return 0
                     self.fov_paths[pos] = os.path.join(root, file)
 
         self.wells = {} # dict - well name: list of FoV taken in the well
-
         for fov in self.fov_paths:
-            if fov[:4] in self.wells:
-                self.wells[fov[:4]] += [fov]
+            well = re.findall(r"X\d+Y\d+", fov)[-1]
+            if well in self.wells:
+                self.wells[well] += [fov]
             else:
-                self.wells[fov[:4]] = [fov]
+                self.wells[well] = [fov]
+
 
         # Check if the images are stacks
         test_img = Image.open(list(self.fov_paths.values())[0])
