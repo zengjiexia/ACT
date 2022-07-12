@@ -54,7 +54,7 @@
      </sizepolicy>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="DFLSPTab">
      <attribute name="title">
@@ -1023,9 +1023,12 @@
      <addaction name="actionComDet"/>
      <addaction name="actionTrevor"/>
      <addaction name="separator"/>
+     <addaction name="actionLiposome_Assay"/>
+     <addaction name="separator"/>
+     <addaction name="actionSuper_resolution_Image_Analysis"/>
     </widget>
-    <addaction name="menuMethod_instruction"/>
     <addaction name="actionProgram_frozen"/>
+    <addaction name="menuMethod_instruction"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1101,6 +1104,16 @@
   <action name="actionFolder_Splitter">
    <property name="text">
     <string>Folder Splitter</string>
+   </property>
+  </action>
+  <action name="actionLiposome_Assay">
+   <property name="text">
+    <string>Liposome Assay</string>
+   </property>
+  </action>
+  <action name="actionSuper_resolution_Image_Analysis">
+   <property name="text">
+    <string>Super-resolution Image Analysis</string>
    </property>
   </action>
  </widget>

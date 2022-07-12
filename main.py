@@ -71,6 +71,8 @@ class MainWindow(QMainWindow):
         self.window.actionComDet.triggered.connect(self.helpComDet)
         self.window.actionTrevor.triggered.connect(self.helpTrevor)
         self.window.actionProgram_frozen.triggered.connect(self.helpFrozen)
+        self.window.actionLiposome_Assay.triggered.connect(self.helpLiposomeAssay)
+        self.window.actionSuper_resolution_Image_Analysis.triggered.connect(self.helpSuperRes)
 
         # DFLSP window widgets
         self.window.DFLSP_runButton.clicked.connect(self.clickDFLSPRun)
@@ -118,7 +120,7 @@ class MainWindow(QMainWindow):
         self.window.progressBar.setValue(progress)
 
 
-    def restProgress(self):
+    def resetProgress(self):
         self.window.progressBarLabel.setText('No work in process.')
         self.window.progressBar.reset()
 
@@ -253,7 +255,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Particles in images are located.')
             )
         self.PFThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
         try:
             self.PFThread.finished.connect(
@@ -294,7 +296,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Reports generated at: ' + self.project.path_result_main)
             )
         self.reportThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
         try:
             self.reportThread.finished.connect(
@@ -425,7 +427,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Liposome analysis finished.')
             )
         self.lipoThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
         try:
             self.lipoThread.finished.connect(
@@ -462,7 +464,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Reports generated at: ' + self.project.path_result_main)
             )
         self.reportThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
         try:
             self.reportThread.finished.connect(
@@ -869,7 +871,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Reconstruction completed.')
             )
         self.SRThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
         if self.SRparameters['fid_method'] == '': # if no fid method selected, skip. Otherwise trigger drift correction
             pass 
@@ -927,7 +929,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Drift correction completed.')
             )
         self.SRThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
         if 'DBSCAN' not in self.SRparameters.keys():
             pass 
@@ -982,7 +984,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Cluster analysis completed.')
             )
         self.SRThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
 
 
@@ -1013,9 +1015,33 @@ Image processing procedure:
             """)
 
 
+    def helpLiposomeAssay(self):
+        self.showMessage('i', r"""                                                      
+            Liposome Assay Analysis
+Parameters:
+    Threshold: Intensity threshold to only keep the particles has a signal above background + this threshold. The default value is 80.
+    
+Image processing procedure:
+    1. Get an averaged image if a stack is provided.
+    2. Cross-correlate the blank, sample images with ionomycin image to remove any drift.
+    3. Find local maxima from the ionomycin image and record their coordinates.
+    4. Obtain intensities of these coordinates from three images.
+    5. Calculate influx by (Isample-Iblank)/(Iionomycin-Iblank)*100%.
+
+Please see https://doi.org/10.1002/anie.201700966 for the published paper on liposome assay.
+            """)
+
+
+    def helpSuperRes(self):
+        self.showMessage("i", r"""
+            Super-resolution Image Analysis
+Please see README file on the Github page for detailed explaination for the methods.
+            """)
+
+
     def helpFrozen(self):
         self.showMessage('i', r"""
-If you encountered program freezing with the progress bar reached 100%, please restart the program and re-run the step you got stuck with (from the Analysis command list).
+If you encountered program frozen after the progress bar reached 100%, please try to run the next step you want from the Analysis command list.
 Please contact Ron Xia (zx252@cam.ac.uk) if you keep having this problem. This is a known bug in the program which should be fixed in later releases. Thanks for your understanding.
             """)
 
@@ -1024,6 +1050,8 @@ Please contact Ron Xia (zx252@cam.ac.uk) if you keep having this problem. This i
         self.folderSplitterPopup = SplitFolderPopup(parent=self)
         self.folderSplitterPopup.window.show()
         self.folderSplitterPopup.finished.connect(self.folderSplitterPopup.window.close)
+
+
 
 # Supporting widgets
 class TagDataPopup(QWidget):
