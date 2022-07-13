@@ -1085,7 +1085,7 @@ class SuperResAnalysis:
 
             cluster_img = cluster_df.to_numpy() # convert pivot table to numpy array
 
-            if self.parameters['length_calculation'] == True:
+            if self.parameters['length_calculation'] == True: # Run length calculation
                 num_clus = np.max(cluster_img)
                 length_list = []
                 for i in range(1, num_clus+1):
@@ -1106,24 +1106,29 @@ class SuperResAnalysis:
                     length_list.append(length)
 
 
-            cluster_profile = regionprops_table(cluster_img, properties=['label', 'area', 'centroid', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity','bbox'])
+            cluster_profile = regionprops_table(cluster_img, properties=['label', 'area', 'centroid', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity','bbox']) # Profile the aggregates
 
             if self.parameters['length_calculation'] == True:
-                cluster_profile['length'] = length_list
+                cluster_profile['length'] = length_list # Add the length result to the profile
 
             cluster_profile = pd.DataFrame(cluster_profile)
 
+            n_localisation = cleaned_df.groupby(['DBSCAN_label'])['id'].count()
+            cluster_profile['n_localisation'] = n_localisation
+
+
             if self.parameters['length_calculation'] == True:
-                cluster_profile.columns = ['cluster_id', 'n_localisations', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax', 'length']
+                cluster_profile.columns = ['cluster_id', 'area', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax', 'length', 'n_localisation']
             else:
-                cluster_profile.columns = ['cluster_id', 'n_localisations', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax']
+                cluster_profile.columns = ['cluster_id', 'area', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax', 'n_localisation']
 
             # Save cluster profile file
             cluster_profile.to_csv(os.path.join(self.path_result_fid, field_name+'_clusterProfile_' + str(self.parameters['DBSCAN']['eps']) + '_' + str(self.parameters['DBSCAN']['min_sample']) + '.csv'))
 
             summary = cluster_profile.agg({
                 'cluster_id': 'max',
-                'n_localisations': ['max', 'min', 'mean'],
+                'n_localisation' : ['max', 'min', 'mean'],
+                'area': ['max', 'min', 'mean'],
                 'convex_area': ['max', 'min', 'mean'],
                 'major_axis_length' : ['max', 'min', 'mean'],
                 'eccentricity': ['max', 'min', 'mean']
@@ -1132,7 +1137,8 @@ class SuperResAnalysis:
         else:
             summary = pd.DataFrame({
                 'cluster_id': [0, '', ''],
-                'n_localisations': [0, 0, 0],
+                'n_localisation': [0, 0, 0],
+                'area': [0, 0, 0],
                 'convex_area': [0, 0, 0],
                 'major_axis_length': [0, 0, 0],
                 'eccentricity': [0, 0, 0],
@@ -1145,12 +1151,13 @@ class SuperResAnalysis:
         report = pd.DataFrame({
             'FoV': [field_name],
             'n_clusters': summary.at['max', 'cluster_id'],
-            'mean_localisation_per_cluster': summary.at['mean', 'n_localisations'],
+            'mean_localisation_per_cluster': summary.at['mean', 'n_localisation'],
+            'mean_area_per_cluster': summary.at['mean', 'area'],
             'mean_convex_area_per_cluster': summary.at['mean', 'convex_area'],
             'mean_eccentricity': summary.at['mean', 'eccentricity'],
-            'total_cluster_localisations': summary.at['max', 'cluster_id'] * summary.at['mean', 'n_localisations'],
+            'total_cluster_localisation': summary.at['max', 'cluster_id'] * summary.at['mean', 'n_localisation'],
             'n_noise': n_noise,
-            'total_localisations': summary.at['max', 'cluster_id'] * summary.at['mean', 'n_localisations'] + n_noise
+            'total_localisation': summary.at['max', 'cluster_id'] * summary.at['mean', 'n_localisation'] + n_noise
             })
         return report
 
