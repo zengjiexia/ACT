@@ -1,4 +1,4 @@
-name: DLA_python3
+name: ACT_python3
 channels:
   - conda-forge
   - defaults
@@ -83,4 +83,4 @@ dependencies:
     - threadpoolctl==3.1.0
     - tifffile==2019.7.26.2
     - tqdm==4.60.0
-prefix: D:\Anaconda3\envs\DLA_python3
+prefix: D:\Anaconda3\envs\ACT_python3

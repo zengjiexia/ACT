@@ -9,7 +9,7 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtGui import QIcon
 import pyqtgraph as pg
 import toolbox
-from logics import SimPullAnalysis, LiposomeAssayAnalysis, SuperResAnalysis
+from logics import DiffractionLimitedAnalysis, LiposomeAssayAnalysis, SuperResAnalysis
 import pandas as pd
 import numpy as np
 import imagej
@@ -218,7 +218,7 @@ class MainWindow(QMainWindow):
         else:
             self.updateLog('Estimated particle size set as '+str(self.size)+' pixels.')
 
-        self.project = SimPullAnalysis(self.data_path) # Creat SimPullAnalysis object
+        self.project = DiffractionLimitedAnalysis(self.data_path) # Creat DiffractionLimitedAnalysis object
         if self.project.error == 1:
             return 1
         else:

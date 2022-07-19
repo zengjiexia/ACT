@@ -26,7 +26,7 @@ import json
 plugins_dir = os.path.join(os.path.dirname(__file__), 'Fiji.app/plugins')
 scyjava.config.add_option(f'-Dplugins.dir={plugins_dir}')
 
-class SimPullAnalysis:
+class DiffractionLimitedAnalysis:
 
     def __init__(self, data_path):
 

@@ -1,4 +1,4 @@
-UKIA - Ultimate Kit for Image Analysis
+ACT - Aggregate Charaterization Toolkit
 ======================================
 
 A platform for the rapid analysis of both diffraction-limited and single-molecule localisation images.
@@ -34,6 +34,8 @@ Applications
 
 Requirements
 ------------
+
+Full list please see ACT_python3.yml.
 
 - Python 3 (tested with Python 3.6-3.9)
 	- os
@@ -79,7 +81,7 @@ Usage
 
 Command line tool:
 ```sh
-conda activate DLA_python3
+conda activate ACT_python3
 python /path_to/main.py
 ```
 
