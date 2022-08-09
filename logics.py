@@ -867,6 +867,7 @@ class SuperResAnalysis:
         if self.parameters['method'] == 'ThunderSTORM':
             self.macro = """
             run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" +field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Visualization", "imleft=0.0 imtop=0.0 imwidth="""+str(self.dimensions[0])+""" imheight="""+str(self.dimensions[1])+""" renderer=[Averaged shifted histograms] magnification="""+str(self.parameters['scale'])+""" colorize=false threed=false shifts=2");
             run("Show results table", "action=drift smoothingbandwidth=0.25 method=[Fiducial markers] ontimeratio="""+str(self.parameters['min_visibility'])+""" distancethr="""+str(self.parameters['max_distance'])+""" save=false");
             run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
             selectWindow("Averaged shifted histograms");
@@ -882,6 +883,7 @@ class SuperResAnalysis:
             self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv") # Convert the GDSC result to TS format and save as _TS.csv
             self.macro = """
             run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" +field_name+"""_results_TS.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Visualization", "imleft=0.0 imtop=0.0 imwidth="""+str(self.dimensions[0])+""" imheight="""+str(self.dimensions[1])+""" renderer=[Averaged shifted histograms] magnification="""+str(self.parameters['scale'])+""" colorize=false threed=false shifts=2");
             run("Show results table", "action=drift smoothingbandwidth=0.25 method=[Fiducial markers] ontimeratio="""+str(self.parameters['min_visibility'])+""" distancethr="""+str(self.parameters['max_distance'])+""" save=false");
             run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected_TS.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
             selectWindow("Averaged shifted histograms");
