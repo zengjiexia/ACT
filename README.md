@@ -1,4 +1,4 @@
-UKIA - Ultimate Kit for Image Analysis
+ACT - Aggregate Charaterization Toolkit
 ======================================
 
 A platform for the rapid analysis of both diffraction-limited and single-molecule localisation images.
@@ -14,7 +14,7 @@ Applications
 		
 	1. ComDet - This method relies on [Fiji(is just imagej)](https://imagej.net/Fiji) and [ComDet](https://github.com/ekatrukha/ComDet) - a plugin written by Eugene Katrukha at the Utrecht University.
 		
-	2. Trevor - A pure python alternative for the ComDet. (Written by Yunzhao Wu)
+	2. PyStar - A pure python alternative for the ComDet. (Written by Yunzhao Wu)
 	
 	An advanced thresholding method, Orthogonal Analysis, is provided. It can help you to distinguish the actual particles detected from the backgroud noises by setting a threshold based on the 'intensity per area' distribution of the spots.
 	
@@ -34,6 +34,8 @@ Applications
 
 Requirements
 ------------
+
+Full list please see ACT_python3.yml.
 
 - Python 3 (tested with Python 3.6-3.9)
 	- os
@@ -79,7 +81,7 @@ Usage
 
 Command line tool:
 ```sh
-conda activate DLA_python3
+conda activate ACT_python3
 python /path_to/main.py
 ```
 

@@ -32,7 +32,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>UKIA - Ultimate Kit for Image Analysis</string>
+   <string>ACT - Aggregate Charaterization Toolkit</string>
   </property>
   <widget class="QWidget" name="mainWidget">
    <widget class="QTabWidget" name="tabWidget">
@@ -149,7 +149,7 @@
          </item>
          <item>
           <property name="text">
-           <string>Trevor</string>
+           <string>PyStar</string>
           </property>
          </item>
         </widget>
@@ -236,10 +236,10 @@
      <widget class="QLineEdit" name="SupRes_pathEntry">
       <property name="geometry">
        <rect>
-        <x>71</x>
+        <x>70</x>
         <y>10</y>
-        <width>431</width>
-        <height>19</height>
+        <width>401</width>
+        <height>20</height>
        </rect>
       </property>
       <property name="text">
@@ -249,10 +249,10 @@
      <widget class="QLabel" name="SupRes_pathLabel">
       <property name="geometry">
        <rect>
-        <x>19</x>
+        <x>20</x>
         <y>10</y>
         <width>45</width>
-        <height>19</height>
+        <height>20</height>
        </rect>
       </property>
       <property name="text">
@@ -262,8 +262,8 @@
      <widget class="QComboBox" name="SupRes_methodSelector">
       <property name="geometry">
        <rect>
-        <x>510</x>
-        <y>10</y>
+        <x>490</x>
+        <y>11</y>
         <width>151</width>
         <height>20</height>
        </rect>
@@ -283,7 +283,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>70</y>
+        <y>40</y>
         <width>761</width>
         <height>55</height>
        </rect>
@@ -295,7 +295,7 @@
        <item row="0" column="0">
         <widget class="QLabel" name="SupRes_PixelSizeLabel">
          <property name="text">
-          <string>Pixel Size/nm</string>
+          <string>Pixel size/nm</string>
          </property>
         </widget>
        </item>
@@ -309,7 +309,7 @@
        <item row="0" column="4">
         <widget class="QLabel" name="SupRes_CamGainLabel">
          <property name="text">
-          <string>Camera Gain</string>
+          <string>Camera gain</string>
          </property>
         </widget>
        </item>
@@ -323,7 +323,7 @@
        <item row="0" column="2">
         <widget class="QLabel" name="SupRes_CamBiasLabel">
          <property name="text">
-          <string>Camera Bias</string>
+          <string>Camera bias</string>
          </property>
         </widget>
        </item>
@@ -340,7 +340,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>130</y>
+        <y>100</y>
         <width>761</width>
         <height>55</height>
        </rect>
@@ -352,7 +352,7 @@
        <item row="1" column="0">
         <widget class="QLabel" name="SupRes_ExpTimeLabel">
          <property name="text">
-          <string>Exposure Time/ms</string>
+          <string>Exposure time/ms</string>
          </property>
         </widget>
        </item>
@@ -362,28 +362,7 @@
           <bool>true</bool>
          </property>
          <property name="text">
-          <string>Quantum Efficiency</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLineEdit" name="SupRes_ExpTimeEntry">
-         <property name="text">
-          <string>50</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="2">
-        <widget class="QLabel" name="SupRes_SRScaleLabel">
-         <property name="text">
-          <string>Super-resolution Scale</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="3">
-        <widget class="QLineEdit" name="SupRes_SRScaleEntry">
-         <property name="text">
-          <string>8</string>
+          <string>Quantum efficiency</string>
          </property>
         </widget>
        </item>
@@ -397,58 +376,49 @@
          </property>
         </widget>
        </item>
+       <item row="1" column="3">
+        <widget class="QLineEdit" name="SupRes_SRScaleEntry">
+         <property name="text">
+          <string>8</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="SupRes_ExpTimeEntry">
+         <property name="text">
+          <string>50</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QLabel" name="SupRes_SRScaleLabel">
+         <property name="text">
+          <string>Super-resolution scale</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QGroupBox" name="SupRes_ClusteringBox">
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>290</y>
+        <y>283</y>
         <width>761</width>
-        <height>111</height>
+        <height>121</height>
        </rect>
       </property>
       <property name="title">
        <string>Data Cleaning and Clustering</string>
       </property>
       <layout class="QGridLayout" name="gridLayout_8">
-       <item row="1" column="4">
-        <widget class="QLineEdit" name="SupRes_minSampleEntry">
+       <item row="4" column="4">
+        <widget class="QLabel" name="SupRes_keepFrameToLabel">
          <property name="enabled">
           <bool>false</bool>
          </property>
          <property name="text">
-          <string>2</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="3">
-        <widget class="QLabel" name="SupRes_minSampleLabel">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>Min Sample</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="4">
-        <widget class="QLineEdit" name="SupRes_sigmaEntry">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>5</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QCheckBox" name="SupRes_filteringCheck">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>Filtering</string>
+          <string>to (0 for no trim)</string>
          </property>
         </widget>
        </item>
@@ -462,7 +432,40 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="2">
+       <item row="1" column="4">
+        <widget class="QLabel" name="SupRes_minSampleLabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Min sample</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QCheckBox" name="SupRes_DBSCANCheck">
+         <property name="text">
+          <string>DBSCAN</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLabel" name="SupRes_keepFrameFromLabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::RightToLeft</enum>
+         </property>
+         <property name="text">
+          <string>Keep frames from</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="3">
         <widget class="QLineEdit" name="SupRes_EPSEntry">
          <property name="enabled">
           <bool>false</bool>
@@ -472,27 +475,7 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="2">
-        <widget class="QLineEdit" name="SupRes_precisionEntry">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>20</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="3">
-        <widget class="QLabel" name="SupRes_sigmaLabel">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>Sigma/pixel</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
+       <item row="3" column="1">
         <widget class="QLabel" name="SupRes_precisionLabel">
          <property name="enabled">
           <bool>false</bool>
@@ -502,10 +485,83 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QCheckBox" name="SupRes_DBSCANCheck">
+       <item row="4" column="6">
+        <widget class="QLineEdit" name="SupRes_keepFrameToEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
-          <string>DBSCAN</string>
+          <string>0</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="3">
+        <widget class="QLineEdit" name="SupRes_precisionEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>20</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="4" colspan="3">
+        <widget class="QCheckBox" name="SupRes_lengthCalCheck">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Aggregate length calculation</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="3">
+        <widget class="QLineEdit" name="SupRes_keepFrameFromEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>0</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="6">
+        <widget class="QLineEdit" name="SupRes_sigmaEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>5</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="3">
+        <widget class="QCheckBox" name="SupRes_filteringCheck">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Particle filter</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="4">
+        <widget class="QLabel" name="SupRes_sigmaLabel">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Sigma/pixel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="6">
+        <widget class="QLineEdit" name="SupRes_minSampleEntry">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>2</string>
          </property>
         </widget>
        </item>
@@ -515,7 +571,7 @@
       <property name="geometry">
        <rect>
         <x>650</x>
-        <y>260</y>
+        <y>9</y>
         <width>121</width>
         <height>25</height>
        </rect>
@@ -547,9 +603,9 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>190</y>
+        <y>200</y>
         <width>761</width>
-        <height>53</height>
+        <height>51</height>
        </rect>
       </property>
       <property name="title">
@@ -559,7 +615,7 @@
        <item>
         <widget class="QLabel" name="SupRes_FidCorrMethodLabel">
          <property name="text">
-          <string>Correction Method</string>
+          <string>Correction method</string>
          </property>
         </widget>
        </item>
@@ -600,7 +656,7 @@
           <bool>false</bool>
          </property>
          <property name="text">
-          <string>Brightness</string>
+          <string>brightness</string>
          </property>
         </widget>
        </item>
@@ -620,7 +676,7 @@
           <bool>false</bool>
          </property>
          <property name="text">
-          <string>Last Time/frames</string>
+          <string>Last time/frames</string>
          </property>
         </widget>
        </item>
@@ -639,10 +695,10 @@
      <widget class="QPushButton" name="SupRes_loadButton">
       <property name="geometry">
        <rect>
-        <x>670</x>
-        <y>10</y>
+        <x>680</x>
+        <y>169</y>
         <width>93</width>
-        <height>22</height>
+        <height>25</height>
        </rect>
       </property>
       <property name="sizePolicy">
@@ -659,8 +715,8 @@
       <property name="geometry">
        <rect>
         <x>230</x>
-        <y>40</y>
-        <width>531</width>
+        <y>171</y>
+        <width>441</width>
         <height>20</height>
        </rect>
       </property>
@@ -670,26 +726,13 @@
        </property>
       </item>
      </widget>
-     <widget class="QLabel" name="SupRes_previousReconstructionAttemptsLabel">
-      <property name="geometry">
-       <rect>
-        <x>20</x>
-        <y>40</y>
-        <width>201</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Previous reconstruction attempts</string>
-      </property>
-     </widget>
      <widget class="QPushButton" name="SupRes_runFidCorrButton">
       <property name="enabled">
        <bool>false</bool>
       </property>
       <property name="geometry">
        <rect>
-        <x>504</x>
+        <x>640</x>
         <y>260</y>
         <width>131</width>
         <height>25</height>
@@ -705,7 +748,7 @@
         <x>20</x>
         <y>261</y>
         <width>141</width>
-        <height>16</height>
+        <height>20</height>
        </rect>
       </property>
       <property name="text">
@@ -719,10 +762,23 @@
       <property name="geometry">
        <rect>
         <x>170</x>
-        <y>261</y>
-        <width>321</width>
-        <height>22</height>
+        <y>262</y>
+        <width>451</width>
+        <height>20</height>
        </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="SupRes_previousReconstructionAttemptsLabel">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>170</y>
+        <width>201</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Previous reconstruction attempts</string>
       </property>
      </widget>
     </widget>
@@ -925,13 +981,13 @@
     </property>
     <addaction name="actionLoad"/>
    </widget>
-   <widget class="QMenu" name="menuTools">
+   <widget class="QMenu" name="menuAnalysis">
     <property name="title">
-     <string>Tools</string>
+     <string>Analysis</string>
     </property>
     <widget class="QMenu" name="menuDFL_SiMPull">
      <property name="title">
-      <string>DFL SiMPull</string>
+      <string>Diffraction-limit Anlaysis</string>
      </property>
      <addaction name="actionRun_analysis_DFLSP"/>
      <addaction name="actionGenerate_reports_DFLSP"/>
@@ -967,11 +1023,21 @@
      <addaction name="actionComDet"/>
      <addaction name="actionTrevor"/>
      <addaction name="separator"/>
+     <addaction name="actionLiposome_Assay"/>
+     <addaction name="separator"/>
+     <addaction name="actionSuper_resolution_Image_Analysis"/>
     </widget>
-    <addaction name="menuMethod_instruction"/>
     <addaction name="actionProgram_frozen"/>
+    <addaction name="menuMethod_instruction"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionFolder_Splitter"/>
    </widget>
    <addaction name="mainMenu"/>
+   <addaction name="menuAnalysis"/>
    <addaction name="menuTools"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -987,7 +1053,7 @@
   </action>
   <action name="actionTrevor">
    <property name="text">
-    <string>Trevor</string>
+    <string>PyStar</string>
    </property>
   </action>
   <action name="actionProgram_frozen">
@@ -1033,6 +1099,21 @@
   <action name="actionRun_clustering_SR">
    <property name="text">
     <string>Run clustering</string>
+   </property>
+  </action>
+  <action name="actionFolder_Splitter">
+   <property name="text">
+    <string>Folder Splitter</string>
+   </property>
+  </action>
+  <action name="actionLiposome_Assay">
+   <property name="text">
+    <string>Liposome Assay</string>
+   </property>
+  </action>
+  <action name="actionSuper_resolution_Image_Analysis">
+   <property name="text">
+    <string>Super-resolution Image Analysis</string>
    </property>
   </action>
  </widget>

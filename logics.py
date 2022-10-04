@@ -9,8 +9,9 @@ import math as ms
 import tifffile as tiff
 import imagej
 from skimage import io
-from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruction
+from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruction, skeletonize_3d, closing
 from skimage.measure import label, regionprops_table
+from sklearn.neighbors import NearestNeighbors
 from sklearn.cluster import DBSCAN
 from astropy.convolution import RickerWavelet2DKernel
 from PIL import Image
@@ -25,7 +26,7 @@ import json
 plugins_dir = os.path.join(os.path.dirname(__file__), 'Fiji.app/plugins')
 scyjava.config.add_option(f'-Dplugins.dir={plugins_dir}')
 
-class SimPullAnalysis:
+class DiffractionLimitedAnalysis:
 
     def __init__(self, data_path):
 
@@ -55,34 +56,33 @@ class SimPullAnalysis:
             for file in files:
                 if file.endswith(".tif"):
                     try:
-                        pos = re.findall(r"X\dY\dR\dW\dC\d", file)[-1]
+                        pos = re.findall(r"X\d+Y\d+R\d+W\d+C\d+", file)[-1]
                         naming_system = 'XnYnRnWnCn'
                     except IndexError:
                         try:
-                            pos = re.findall(r'X\dY\dR\dW\d', file)[-1]
+                            pos = re.findall(r'X\d+Y\d+R\d+W\d+', file)[-1]
                             naming_system = 'XnYnRnWn'
                         except IndexError:
                             try:
-                                pos = re.findall(r'Pos\d', file)[-1]
+                                pos = re.findall(r'Pos\d+', file)[-1]
                                 naming_system = 'Posn'
                             except IndexError:
                                 return 0
                     self.fov_paths[pos] = os.path.join(root, file)
+
         self.wells = {} # dict - well name: list of FoV taken in the well
-        try:
-            list(self.fov_paths.keys())[0][7] # Check if the naming system is in 'pos\d'. IndexError would be raised if so.
-            pass
-        except IndexError:
+        if naming_system == 'Posn':
             for fov in self.fov_paths:
                 self.wells[fov] = [fov]
             return naming_system
-
-        for fov in self.fov_paths:
-            if fov[:4] in self.wells:
-                self.wells[fov[:4]] += [fov]
-            else:
-                self.wells[fov[:4]] = [fov]
-        return naming_system
+        else:
+            for fov in self.fov_paths:
+                well = re.findall(r"X\d+Y\d+", fov)[-1]
+                if well in self.wells:
+                    self.wells[well] += [fov]
+                else:
+                    self.wells[well] = [fov]
+            return naming_system
 
 
     def call_ComDet(self, size, threshold, progress_signal=None, IJ=None):
@@ -739,19 +739,23 @@ class SuperResAnalysis:
             for file in files:
                 if file.endswith(".tif"):
                     try:
-                        pos = re.findall(r"X\dY\dR\dW\dC\d", file)[-1]
+                        pos = re.findall(r"X\d+Y\d+R\d+W\d+C\d+", file)[-1]
                     except IndexError:
-                        self.error = 'Error in the naming system of the images. Please make sure the image names contain coordinate in form of XnYnRnWnCn.'
-                        return 0
+                        try:
+                            pos = re.findall(r'X\d+Y\d+R\d+W\d+', file)[-1]
+                        except IndexError:
+                            self.error = 'Error in the naming system of the images. Please make sure the image names contain coordinate in form of XnYnRnWnCn or XnYnRnWn.'
+                            return 0
                     self.fov_paths[pos] = os.path.join(root, file)
 
         self.wells = {} # dict - well name: list of FoV taken in the well
-
         for fov in self.fov_paths:
-            if fov[:4] in self.wells:
-                self.wells[fov[:4]] += [fov]
+            well = re.findall(r"X\d+Y\d+", fov)[-1]
+            if well in self.wells:
+                self.wells[well] += [fov]
             else:
-                self.wells[fov[:4]] = [fov]
+                self.wells[well] = [fov]
+
 
         # Check if the images are stacks
         test_img = Image.open(list(self.fov_paths.values())[0])
@@ -784,7 +788,7 @@ class SuperResAnalysis:
         elif self.parameters['method'] == 'ThunderSTORM':
             self.macro = """
             run("Camera setup", "offset="""+str(self.parameters['camera_bias'])+""" quantumefficiency="""+str(self.parameters['quantum_efficiency'])+""" isemgain=true photons2adu=3.6 gainem="""+str(self.parameters['camera_gain'])+""" pixelsize="""+str(self.parameters['pixel_size'])+"""");
-            run("Run analysis", "filter=[Wavelet filter (B-Spline)] scale=2.0 order=3 detector=[Local maximum] connectivity=8-neighbourhood threshold=std(Wave.F1) estimator=[PSF: Integrated Gaussian] sigma=1.6 fitradius=3 method=[Weighted Least squares] full_image_fitting=false mfaenabled=false renderer=[Averaged shifted histograms] magnification="""+str(self.parameters['scale'])+""" colorize=false threed=false shifts=2 repaint="""+str(int(self.parameters['exposure_time']))+"""");
+            run("Run analysis", "filter=[Wavelet filter (B-Spline)] scale=2.0 order=3 detector=[Local maximum] connectivity=8-neighbourhood threshold=1.5*std(Wave.F1) estimator=[PSF: Integrated Gaussian] sigma=1.6 fitradius=3 method=[Weighted Least squares] full_image_fitting=false mfaenabled=false renderer=[Averaged shifted histograms] magnification="""+str(self.parameters['scale'])+""" colorize=false threed=false shifts=2 repaint="""+str(int(self.parameters['exposure_time']))+"""");
             run("Export results", "floatprecision=5 filepath="""+self.path_result_raw + '/' + field_name+"""_results.csv fileformat=[CSV (comma separated)] sigma=true intensity=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
             selectWindow('Averaged shifted histograms');
             saveAs("tif", \""""+self.path_result_raw + '/SR_' + field_name+""".tif\");
@@ -799,7 +803,7 @@ class SuperResAnalysis:
         self.timeStamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         self.path_result_main = (self.path_data_main + '_' + self.timeStamp + '_' + self.parameters['method'])
         self.path_result_main = self.path_result_main.replace("\\", "/") # fiji only reads path with /
-        self.path_result_main = self.path_result_main.replace(" ", "_") # fiji only reads path with /
+        #self.path_result_main = self.path_result_main.replace(" ", "_") # fiji only reads path with /
         if os.path.isdir(self.path_result_main) != 1:
             os.mkdir(self.path_result_main)
         self.path_result_raw = os.path.join(self.path_result_main, 'raw')
@@ -834,6 +838,7 @@ class SuperResAnalysis:
             else:
                 c += 1
                 progress_signal.emit(c)
+
         return 1
 
 
@@ -862,6 +867,7 @@ class SuperResAnalysis:
         if self.parameters['method'] == 'ThunderSTORM':
             self.macro = """
             run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" +field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Visualization", "imleft=0.0 imtop=0.0 imwidth="""+str(self.dimensions[0])+""" imheight="""+str(self.dimensions[1])+""" renderer=[Averaged shifted histograms] magnification="""+str(self.parameters['scale'])+""" colorize=false threed=false shifts=2");
             run("Show results table", "action=drift smoothingbandwidth=0.25 method=[Fiducial markers] ontimeratio="""+str(self.parameters['min_visibility'])+""" distancethr="""+str(self.parameters['max_distance'])+""" save=false");
             run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
             selectWindow("Averaged shifted histograms");
@@ -877,6 +883,7 @@ class SuperResAnalysis:
             self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv") # Convert the GDSC result to TS format and save as _TS.csv
             self.macro = """
             run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" +field_name+"""_results_TS.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Visualization", "imleft=0.0 imtop=0.0 imwidth="""+str(self.dimensions[0])+""" imheight="""+str(self.dimensions[1])+""" renderer=[Averaged shifted histograms] magnification="""+str(self.parameters['scale'])+""" colorize=false threed=false shifts=2");
             run("Show results table", "action=drift smoothingbandwidth=0.25 method=[Fiducial markers] ontimeratio="""+str(self.parameters['min_visibility'])+""" distancethr="""+str(self.parameters['max_distance'])+""" save=false");
             run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected_TS.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
             selectWindow("Averaged shifted histograms");
@@ -894,7 +901,8 @@ class SuperResAnalysis:
     def _fidCorr_TS_crossCorrelation(self, field_name, IJ=None):
         if self.parameters['method'] == 'ThunderSTORM':
             self.macro = """
-            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results.csv fileformat=[CSV (comma separated)] livepreview=false rawimagestack= startingframe=1 append=false");
+            run("Visualization", "imleft=0.0 imtop=0.0 imwidth="""+str(self.dimensions[0])+""" imheight="""+str(self.dimensions[1])+""" renderer=[Averaged shifted histograms] magnification="""+str(self.parameters['scale'])+""" colorize=false threed=false shifts=2");
             run("Show results table", "action=drift magnification="""+str(self.parameters['magnification'])+""" method=[Cross correlation] ccsmoothingbandwidth=0.25 save=false steps="""+str(self.parameters['bin_size'])+""" showcorrelations=false");
             run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
             selectWindow("Averaged shifted histograms");
@@ -909,7 +917,8 @@ class SuperResAnalysis:
         elif self.parameters['method'] == 'GDSC SMLM 1':
             self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv") # Convert the GDSC result to TS format and save as _TS.csv
             self.macro = """
-            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results_TS.csv fileformat=[CSV (comma separated)] livepreview=true rawimagestack= startingframe=1 append=false");
+            run("Import results", "detectmeasurementprotocol=true filepath="""+self.path_result_raw+ "/" + field_name+"""_results_TS.csv fileformat=[CSV (comma separated)] livepreview=false rawimagestack= startingframe=1 append=false");
+            run("Visualization", "imleft=0.0 imtop=0.0 imwidth="""+str(self.dimensions[0])+""" imheight="""+str(self.dimensions[1])+""" renderer=[Averaged shifted histograms] magnification="""+str(self.parameters['scale'])+""" colorize=false threed=false shifts=2");
             run("Show results table", "action=drift magnification="""+str(self.parameters['magnification'])+""" method=[Cross correlation] ccsmoothingbandwidth=0.25 save=false steps="""+str(self.parameters['bin_size'])+""" showcorrelations=false");
             run("Export results", "floatprecision=5 filepath="""+self.path_result_fid+"/"+field_name+"""_corrected_TS.csv fileformat=[CSV (comma separated)] sigma=true intensity=true chi2=true offset=true saveprotocol=true x=true y=true bkgstd=true id=true uncertainty_xy=true frame=true");
             selectWindow("Averaged shifted histograms");
@@ -962,6 +971,7 @@ class SuperResAnalysis:
             else:
                 c += 1
                 progress_signal.emit(c)
+
         return 1
 
 
@@ -975,14 +985,21 @@ class SuperResAnalysis:
         df = pd.read_csv(file_dir)
 
         # Filter spots based on chosen parameters
-        # For GDSC, sigma-SD, precision-Precisions
+        # For GDSC, sigma-SD, precision-Precisions (for 2D images, X SD = Y SD)
         # For ThunderSTORM, sigma-sigma, precision-uncertainty
         if self.parameters['method'] == 'GDSC SMLM 1':
             df = df.loc[df['X SD'] <= paras['sigma']]
-            df = df.loc[df['Precisions (nm)'] <= paras['precision']]
+            df = df.loc[df['Precision (nm)'] <= paras['precision']]
+            df = df.loc[df['Frame'] >= paras['keepFrom']]
+            if paras['keepTo'] != 0:
+                df = df.loc[df['Frame'] <= paras['keepTo']]
+
         elif self.parameters['method'] == 'ThunderSTORM':
             df = df.loc[df['sigma [nm]'] <= paras['sigma']*self.parameters['pixel_size']]
             df = df.loc[df['uncertainty_xy [nm]'] <= paras['precision']]
+            df = df.loc[df['frame'] >= paras['keepFrom']]
+            if paras['keepTo'] != 0:
+                df = df.loc[df['frame'] <= paras['keepTo']]
 
         df = df.reset_index(drop=True)
         df.to_csv(file_dir.replace('.csv', '_filter_'+str(paras['precision'])+'_'+str(paras['sigma'])+'.csv')) # File naming: filter_precision_sigma
@@ -1000,11 +1017,16 @@ class SuperResAnalysis:
         # Using  filtered data for clustering
         try:
             filters = self.parameters['filter']
-            file_dir = file_dir.replace('.csv', '_filter_'+str(paras['precision'])+'_'+str(paras['sigma'])+'.csv')
+            file_dir = file_dir.replace('.csv', '_filter_'+str(filters['precision'])+'_'+str(filters['sigma'])+'.csv')
         except KeyError:
             pass
+            
+        try:
+            df = pd.read_csv(file_dir)
+        except pd.errors.EmptyDataError:
+            print('No localisation in the data.')
+            return 0
 
-        df = pd.read_csv(file_dir)
         # The coordinates for localisations are in pixel for GDSC results and nm for TS results. This step unifies the unit to nm.
         if self.parameters['method'] == 'GDSC SMLM 1':
             df['x [nm]'] = df['X'] * self.parameters['pixel_size']
@@ -1013,10 +1035,21 @@ class SuperResAnalysis:
             df['X'] = df['x [nm]'] / self.parameters['pixel_size']
             df['Y'] = df['y [nm]'] / self.parameters['pixel_size']
 
-        clustering = DBSCAN(eps=self.parameters['DBSCAN']['eps'] , min_samples=self.parameters['DBSCAN']['min_sample']).fit(df[['x [nm]', 'y [nm]']])
+        try:
+            clustering = DBSCAN(eps=self.parameters['DBSCAN']['eps'] , min_samples=self.parameters['DBSCAN']['min_sample']).fit(df[['x [nm]', 'y [nm]']])
+        except ValueError:
+            print('Not enough localisations for DBSCAN.')
+            report = pd.DataFrame({
+                'FoV': [field_name],
+                'n_clusters': [0],
+                'cluster_localisations': [0],
+                'n_noise': [0],
+                'total_localisations': [0]
+            })
+            return report
 
         labels = list(clustering.labels_)
-        n_clusters = len(labels) - (1 if -1 in labels else 0)
+        n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
         n_noise = labels.count(-1)
 
         # Label the localisations in the df with cluster ids
@@ -1026,34 +1059,109 @@ class SuperResAnalysis:
         # Remove localisations labelled as noise from the df
         cleaned_df = labelled_df.copy()
         cleaned_df = labelled_df[labelled_df.DBSCAN_label != -1]
-        # Save cleaned localisation file
-        cleaned_df.to_csv(os.path.join(self.path_result_fid, field_name+'_clustered.csv'))
 
-        cleaned_labels = labels.copy()
-        cleaned_labels = cleaned_labels[cleaned_labels != -1]
+        # Save cleaned cluster localisation file
+        cleaned_df.to_csv(os.path.join(self.path_result_fid, field_name+'_clustered_' + str(self.parameters['DBSCAN']['eps']) + '_' + str(self.parameters['DBSCAN']['min_sample']) + '.csv'))
 
-        # Magnify the coordinates
-        df['X_mag'] = (df['X'] * self.parameters['scale']).astype(np.uint16)
-        df['Y_mag'] = (df['Y'] * self.parameters['scale']).astype(np.uint16)
+        # Cluster profiling if cluster found
+        if n_clusters != 0:
+            cleaned_labels = labels.copy()
+            cleaned_labels = cleaned_labels[cleaned_labels != -1]
 
-        # Cluster profiling
-        placeholder = pd.DataFrame({
-            'X_mag': np.tile(range(0, self.img_shape[1] * self.parameters['scale']), self.img_shape[2] * self.parameters['scale']), 
-            # Repeat x coordinates y times
-            'Y_mag': np.repeat(range(0, self.img_shape[2] * self.parameters['scale']), self.img_shape[1] * self.parameters['scale'])
-            # Repeat y coordinates x times
-        }) # Creates a dataframe contains all the pixel localisations
-        
-        cluster_df = cleaned_df.copy()
-        cluster_df['DBSCAN_label'] += 1 # Change label 0 to 1
-        cluster_df = pd.concat([cluster_df, placeholder], axis=0, join='outer') # Combine placeholder with actual dataframe
-        cluster_df = pd.pivot_table(cluster_df, values='DBSCAN_label', index=['Y_mag'], columns=['X_mag'], aggfunc='max', fill_value=0) # Convert coordinate dataframe to array-like dataframe with index as Y, column as X, value as cluster label
-        cluster_img = cluster_df.to_numpy()
-        cluster_profile = regionprops_table(cluster_img, properties=['label', 'area', 'centroid', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity','bbox'])
-        cluster_profile = pd.DataFrame(cluster_profile)
-        cluster_profile.columns(['cluster_id', 'no_localisation', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax'])
-        cluster_profile.to_csv(os.path.join(self.path_result_fid, field_name+'_clusterProfile.csv'))
-        return 1
+            # Magnify the coordinates
+            cleaned_df['X_mag'] = (cleaned_df['X'] * self.parameters['scale']).astype('int16')
+            cleaned_df['Y_mag'] = (cleaned_df['Y'] * self.parameters['scale']).astype('int16')
+
+            # Creates a dataframe contains all the pixel localisations
+            placeholder = pd.DataFrame({
+                'X_mag': np.tile(range(0, self.dimensions[0] * self.parameters['scale']), self.dimensions[1] * self.parameters['scale']), 
+                # Repeat x coordinates y times
+                'Y_mag': np.repeat(range(0, self.dimensions[1] * self.parameters['scale']), self.dimensions[0] * self.parameters['scale'])
+                # Repeat y coordinates x times
+            })
+
+            cluster_df = cleaned_df.copy()
+            cluster_df['DBSCAN_label'] += 1 # Change label from 0-based to 1-based
+            cluster_df = pd.concat([cluster_df, placeholder], axis=0, join='outer', sort=False) # Combine placeholder with actual dataframe
+            cluster_df = pd.pivot_table(cluster_df, values='DBSCAN_label', index=['Y_mag'], columns=['X_mag'], aggfunc='max', fill_value=0) # Convert coordinate dataframe to array-like dataframe with index as Y, column as X, value as cluster label
+
+            cluster_img = cluster_df.to_numpy() # convert pivot table to numpy array
+
+            if self.parameters['length_calculation'] == True: # Run length calculation
+                num_clus = np.max(cluster_img)
+                length_list = []
+                for i in range(1, num_clus+1):
+                    coor = np.where(cluster_img == i)
+                    coor0 = coor[0]-np.min(coor[0])
+                    coor1 = coor[1]-np.min(coor[1])
+                    clus_area = np.zeros((np.max(coor0)+1, np.max(coor1)+1))
+                    clus_area[(coor0, coor1)] = 1
+                    clus_area_close = closing(clus_area)
+                    clus_skele = skeletonize_3d(clus_area_close)
+                    xy = np.asarray(np.where(clus_skele)).T
+                    length = 0
+                    nbrs = NearestNeighbors(radius = 1.5, algorithm='auto').fit(xy)
+                    rng = nbrs.radius_neighbors(xy)
+                    for j in rng[0]:
+                        length += sum(j)
+                    length = length/2 + 1
+                    length_list.append(length)
+
+
+            cluster_profile = regionprops_table(cluster_img, properties=['label', 'area', 'centroid', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity','bbox']) # Profile the aggregates
+
+            if self.parameters['length_calculation'] == True:
+                cluster_profile['length'] = length_list # Add the length result to the profile
+
+            cluster_profile = pd.DataFrame(cluster_profile)
+
+            n_localisation = cleaned_df.groupby(['DBSCAN_label'])['id'].count()
+            cluster_profile['n_localisation'] = n_localisation
+
+
+            if self.parameters['length_calculation'] == True:
+                cluster_profile.columns = ['cluster_id', 'area', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax', 'length', 'n_localisation']
+            else:
+                cluster_profile.columns = ['cluster_id', 'area', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax', 'n_localisation']
+
+            # Save cluster profile file
+            cluster_profile.to_csv(os.path.join(self.path_result_fid, field_name+'_clusterProfile_' + str(self.parameters['DBSCAN']['eps']) + '_' + str(self.parameters['DBSCAN']['min_sample']) + '.csv'))
+
+            summary = cluster_profile.agg({
+                'cluster_id': 'max',
+                'n_localisation' : ['max', 'min', 'mean'],
+                'area': ['max', 'min', 'mean'],
+                'convex_area': ['max', 'min', 'mean'],
+                'major_axis_length' : ['max', 'min', 'mean'],
+                'eccentricity': ['max', 'min', 'mean']
+            })
+            summary.at['max', 'n_noise'] = n_noise
+        else:
+            summary = pd.DataFrame({
+                'cluster_id': [0, '', ''],
+                'n_localisation': [0, 0, 0],
+                'area': [0, 0, 0],
+                'convex_area': [0, 0, 0],
+                'major_axis_length': [0, 0, 0],
+                'eccentricity': [0, 0, 0],
+                'n_noise': [n_noise, '', '']
+            })
+            summary.index = ['max', 'min', 'mean']
+
+        summary.to_csv(os.path.join(self.path_result_fid, field_name+'_Summary_' + str(self.parameters['DBSCAN']['eps']) + '_' + str(self.parameters['DBSCAN']['min_sample']) + '.csv'))
+
+        report = pd.DataFrame({
+            'FoV': [field_name],
+            'n_clusters': summary.at['max', 'cluster_id'],
+            'mean_localisation_per_cluster': summary.at['mean', 'n_localisation'],
+            'mean_area_per_cluster': summary.at['mean', 'area'],
+            'mean_convex_area_per_cluster': summary.at['mean', 'convex_area'],
+            'mean_eccentricity': summary.at['mean', 'eccentricity'],
+            'total_cluster_localisation': summary.at['max', 'cluster_id'] * summary.at['mean', 'n_localisation'],
+            'n_noise': n_noise,
+            'total_localisation': summary.at['max', 'cluster_id'] * summary.at['mean', 'n_localisation'] + n_noise
+            })
+        return report
 
 
     def superRes_clustering(self, progress_signal=None):
@@ -1064,6 +1172,7 @@ class SuperResAnalysis:
             workload = sorted(self.fov_paths)
             c = 0 # progress indicator
 
+        report_df = pd.DataFrame()
         for field in workload:
             
             try:
@@ -1071,7 +1180,9 @@ class SuperResAnalysis:
             except KeyError:
                 print('Filtering is not selected.')
 
-            self._cluster_DBSCAN(field)
+            
+            report = self._cluster_DBSCAN(field)
+            report_df = pd.concat([report_df, report])
 
             if progress_signal == None:
                 pass
@@ -1079,6 +1190,7 @@ class SuperResAnalysis:
                 c += 1
                 progress_signal.emit(c)
 
+        report_df.to_csv(os.path.join(self.path_result_fid, 'Summary_' + str(self.parameters['DBSCAN']['eps']) + '_' + str(self.parameters['DBSCAN']['min_sample']) + '.csv'))
         return 1
 
 
@@ -1087,8 +1199,8 @@ if __name__ == "__main__":
 
     #path = input('Please input the path for analysis:\n')
     #if os.path.isdir(path) != True:
-    #	print('Please input valid directory for data.')
-    #	quit()
+    #   print('Please input valid directory for data.')
+    #   quit()
     project = SuperResAnalysis(r"D:\Work\Supres_test\Sample", {'method': 'GDSC SMLM 1'})
     #print('Launching: ' + path)
     #size = input('Please input the estimated size of particles(in pixels):\n')

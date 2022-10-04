@@ -1,14 +1,15 @@
 import sys
 import os
+import shutil
 
 import PySide6
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QMessageBox, QProgressDialog, QFileDialog, QVBoxLayout, QRadioButton, QButtonGroup
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QMessageBox, QProgressDialog, QFileDialog, QVBoxLayout, QGridLayout, QRadioButton, QButtonGroup, QLabel, QLineEdit
 from PySide6.QtCore import QFile, QIODevice, Slot, Qt, QThread, Signal, QRect
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtGui import QIcon
 import pyqtgraph as pg
 import toolbox
-from logics import SimPullAnalysis, LiposomeAssayAnalysis, SuperResAnalysis
+from logics import DiffractionLimitedAnalysis, LiposomeAssayAnalysis, SuperResAnalysis
 import pandas as pd
 import numpy as np
 import imagej
@@ -50,7 +51,7 @@ class MainWindow(QMainWindow):
         # Menu
             # File
         self.window.actionLoad.triggered.connect(self.loadDataPath)
-            # Tools
+            # Analysis
                 # DFL
         self.window.actionRun_analysis_DFLSP.triggered.connect(self.clickDFLSPRun)
         self.window.actionGenerate_reports_DFLSP.triggered.connect(self.clickDFLSPGenerateReports)
@@ -62,11 +63,16 @@ class MainWindow(QMainWindow):
         self.window.actionRun_reconstruction_SR.triggered.connect(self.clickSRRun)
         self.window.actionRun_drift_correction_SR.triggered.connect(self.clickSRfidCorr)
         self.window.actionRun_clustering_SR.triggered.connect(self.clickSRClustering)
+            # Tools
+                # Folder Splitter
+        self.window.actionFolder_Splitter.triggered.connect(self.clickFolderSplitter)
 
             # Help
         self.window.actionComDet.triggered.connect(self.helpComDet)
         self.window.actionTrevor.triggered.connect(self.helpTrevor)
         self.window.actionProgram_frozen.triggered.connect(self.helpFrozen)
+        self.window.actionLiposome_Assay.triggered.connect(self.helpLiposomeAssay)
+        self.window.actionSuper_resolution_Image_Analysis.triggered.connect(self.helpSuperRes)
 
         # DFLSP window widgets
         self.window.DFLSP_runButton.clicked.connect(self.clickDFLSPRun)
@@ -87,6 +93,7 @@ class MainWindow(QMainWindow):
 
         self.window.SupRes_DBSCANCheck.stateChanged.connect(self._SRClusteringDBSCANSelection)
         self.window.SupRes_filteringCheck.stateChanged.connect(self._SRClusteringFilteringSelection)
+        self.window.SupRes_lengthCalCheck.stateChanged.connect(self._SRLengthCalSelection)
         self.window.SupRes_runClusteringButton.clicked.connect(self.clickSRClustering)
 
         ui_file.close()
@@ -113,7 +120,7 @@ class MainWindow(QMainWindow):
         self.window.progressBar.setValue(progress)
 
 
-    def restProgress(self):
+    def resetProgress(self):
         self.window.progressBarLabel.setText('No work in process.')
         self.window.progressBar.reset()
 
@@ -211,7 +218,7 @@ class MainWindow(QMainWindow):
         else:
             self.updateLog('Estimated particle size set as '+str(self.size)+' pixels.')
 
-        self.project = SimPullAnalysis(self.data_path) # Creat SimPullAnalysis object
+        self.project = DiffractionLimitedAnalysis(self.data_path) # Creat DiffractionLimitedAnalysis object
         if self.project.error == 1:
             return 1
         else:
@@ -248,7 +255,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Particles in images are located.')
             )
         self.PFThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
         try:
             self.PFThread.finished.connect(
@@ -289,7 +296,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Reports generated at: ' + self.project.path_result_main)
             )
         self.reportThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
         try:
             self.reportThread.finished.connect(
@@ -420,7 +427,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Liposome analysis finished.')
             )
         self.lipoThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
         try:
             self.lipoThread.finished.connect(
@@ -457,7 +464,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Reports generated at: ' + self.project.path_result_main)
             )
         self.reportThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
         try:
             self.reportThread.finished.connect(
@@ -479,6 +486,7 @@ class MainWindow(QMainWindow):
         This function updates the items in SupRes_previousReconstructionAttemptSelector, by listing all the directories parallel to the data path.
         """
         previous_reconstruction_attempts = [i for i in os.listdir(os.path.dirname(self.data_path)) if os.path.isdir(os.path.join(os.path.dirname(self.data_path), i))] # Find all previous reconstruction attempts and only keep folders
+        previous_reconstruction_attempts = [i for i in previous_reconstruction_attempts if i.startswith(os.path.basename(self.data_path))] # Remove unrelated folders
         previous_reconstruction_attempts.remove(os.path.basename(self.data_path)) # Remove original path from the list
         if len(previous_reconstruction_attempts) != 0:
             self.updateLog(str(len(previous_reconstruction_attempts)) + ' previous attempts are found.')
@@ -508,6 +516,7 @@ class MainWindow(QMainWindow):
         if self.data_path.endswith('/'):
             self.data_path = self.data_path[:-1]
 
+        self._createSRProject()
         self._updateSRPreviousReconstructionAttempts()
 
 
@@ -534,38 +543,46 @@ class MainWindow(QMainWindow):
 
     def _SRPreviousReconstructionAttemptSelected(self):
         selected_attempt = self.window.SupRes_previousReconstructionAttemptSelector.currentText()
+        if selected_attempt == '':
+            pass # avoid KeyError triggered when clearing combobox
+        elif selected_attempt != "New":
+             # Create project for super resolution analysis
+            self.project.path_result_main = self.previous_reconstruction_attempts[selected_attempt]
+            self.project.path_result_raw = self.project.path_result_main + '/raw'
 
-        # Check if the parameter log for the previous attempt is available
-        try:
-            with open(os.path.join(self.previous_reconstruction_attempts[selected_attempt], 'parameters.txt'), 'r') as js_file:
-                self.SRparameters = json.load(js_file)
-        except FileNotFoundError:
-            self.showMessage('w', 'Parameter info for selected attempt not found. Default parameters used.')
-            return 0
-        except KeyError:
-            self.window.SupRes_runFidCorrButton.setEnabled(False)
-            self.window.SupRes_previousCorrectionAttemptsSelector.clear()
-            self.window.SupRes_previousCorrectionAttemptsSelector.setEnabled(False)
-            return 1
+            # Check if the parameter log for the previous attempt is available
+            try:
+                with open(os.path.join(self.previous_reconstruction_attempts[selected_attempt], 'parameters.txt'), 'r') as js_file:
+                    self.SRparameters = json.load(js_file)
+            except FileNotFoundError:
+                self.showMessage('w', 'Parameter info for selected attempt not found. Default parameters used.')
+                return 0
+            except KeyError:
+                self.window.SupRes_runFidCorrButton.setEnabled(False)
+                self.window.SupRes_previousCorrectionAttemptsSelector.clear()
+                self.window.SupRes_previousCorrectionAttemptsSelector.setEnabled(False)
+                return 1
 
 
-        ind = self.window.SupRes_methodSelector.findText(self.SRparameters['method'])
-        if ind >= 0:
-            self.window.SupRes_methodSelector.setCurrentIndex(ind)
+            ind = self.window.SupRes_methodSelector.findText(self.SRparameters['method'])
+            if ind >= 0:
+                self.window.SupRes_methodSelector.setCurrentIndex(ind)
 
-        if self.SRparameters['method'] == 'ThunderSTORM':
-            self.window.SupRes_QEEntry.setText(str(self.SRparameters['quantum_efficiency']))
+            if self.SRparameters['method'] == 'ThunderSTORM':
+                self.window.SupRes_QEEntry.setText(str(self.SRparameters['quantum_efficiency']))
 
-        self.window.SupRes_PixelSizeEntry.setText(str(self.SRparameters['pixel_size']))
-        self.window.SupRes_CamBiasEntry.setText(str(self.SRparameters['camera_bias']))
-        self.window.SupRes_CamGainEntry.setText(str(self.SRparameters['camera_gain']))
-        self.window.SupRes_ExpTimeEntry.setText(str(self.SRparameters['exposure_time']))
-        self.window.SupRes_SRScaleEntry.setText(str(self.SRparameters['scale']))
+            self.window.SupRes_PixelSizeEntry.setText(str(self.SRparameters['pixel_size']))
+            self.window.SupRes_CamBiasEntry.setText(str(self.SRparameters['camera_bias']))
+            self.window.SupRes_CamGainEntry.setText(str(self.SRparameters['camera_gain']))
+            self.window.SupRes_ExpTimeEntry.setText(str(self.SRparameters['exposure_time']))
+            self.window.SupRes_SRScaleEntry.setText(str(self.SRparameters['scale']))
 
-        self.window.SupRes_runFidCorrButton.setEnabled(True)
+            self.window.SupRes_runFidCorrButton.setEnabled(True)
 
-        self._createSRProject()
-        self._updateSRPreviousCorrectionAttempts()
+
+            self._updateSRPreviousCorrectionAttempts()
+        else: 
+            pass
 
         return 1
 
@@ -612,6 +629,7 @@ class MainWindow(QMainWindow):
             self.window.SupRes_minSampleEntry.setEnabled(True)
 
             self.window.SupRes_filteringCheck.setEnabled(True)
+            self.window.SupRes_lengthCalCheck.setEnabled(True)
         else:
             self.window.SupRes_runClusteringButton.setEnabled(False)
             self.window.SupRes_EPSLabel.setEnabled(False)
@@ -621,6 +639,15 @@ class MainWindow(QMainWindow):
 
             self.window.SupRes_filteringCheck.setChecked(False)
             self.window.SupRes_filteringCheck.setEnabled(False)
+            self.window.SupRes_lengthCalCheck.setChecked(False)
+            self.window.SupRes_lengthCalCheck.setEnabled(False)
+
+
+    def _SRLengthCalSelection(self):
+        if self.window.SupRes_lengthCalCheck.isChecked():
+            self.showMessage('w', 'The cluster length calculation method is a beta feature. It might require a large amount of computational power and time. Please see the README on github for more information.')
+        else:
+            pass
 
 
     def _SRClusteringFilteringSelection(self):
@@ -629,11 +656,19 @@ class MainWindow(QMainWindow):
             self.window.SupRes_precisionEntry.setEnabled(True)
             self.window.SupRes_sigmaLabel.setEnabled(True)
             self.window.SupRes_sigmaEntry.setEnabled(True)
+            self.window.SupRes_keepFrameFromLabel.setEnabled(True)
+            self.window.SupRes_keepFrameFromEntry.setEnabled(True)
+            self.window.SupRes_keepFrameToLabel.setEnabled(True)
+            self.window.SupRes_keepFrameToEntry.setEnabled(True)
         else:
             self.window.SupRes_precisionLabel.setEnabled(False)
             self.window.SupRes_precisionEntry.setEnabled(False)
             self.window.SupRes_sigmaLabel.setEnabled(False)
             self.window.SupRes_sigmaEntry.setEnabled(False)
+            self.window.SupRes_keepFrameFromLabel.setEnabled(False)
+            self.window.SupRes_keepFrameFromEntry.setEnabled(False)
+            self.window.SupRes_keepFrameToLabel.setEnabled(False)
+            self.window.SupRes_keepFrameToEntry.setEnabled(False)
 
 
     def _methodOptSR(self):
@@ -688,13 +723,13 @@ class MainWindow(QMainWindow):
                 self.window.SupRes_FidCorrParaLabel1.setText('Bin size')
                 self.window.SupRes_FidCorrParaLabel2.setText('Magnification')
                 self.window.SupRes_FidCorrParaEntry1.setText('10')
-                self.window.SupRes_FidCorrParaEntry2.setText('5.0')
+                self.window.SupRes_FidCorrParaEntry2.setText('8.0')
 
 
     def clickSRRun(self):
+        self._createSRProject()
         guard = self._checkSRParameters()
         if guard == 1:
-            self._createSRProject()
             self._runSRReconstruction()
 
 
@@ -704,7 +739,7 @@ class MainWindow(QMainWindow):
         else:
             guard = self._checkSRParameters()
             if guard == 1:
-                self._createSRProject()
+                
                 self._runSRFidCorr()
 
 
@@ -732,7 +767,7 @@ class MainWindow(QMainWindow):
             'camera_bias' : float(self.window.SupRes_CamBiasEntry.text()),
             'camera_gain' : float(self.window.SupRes_CamGainEntry.text()),
             'exposure_time' : float(self.window.SupRes_ExpTimeEntry.text()),
-            'scale' : float(self.window.SupRes_SRScaleEntry.text()),
+            'scale' : int(round(float(self.window.SupRes_SRScaleEntry.text()))),
             'fid_method' : self.window.SupRes_FidCorrMethodSelector.currentText(),
             'signal_strength' : 40,
             'precision': 20.0,
@@ -758,37 +793,38 @@ class MainWindow(QMainWindow):
             if self.window.SupRes_filteringCheck.isChecked(): # Obtain parameters for data filtering if the method is required
                 self.SRparameters['filter'] = {
                 "precision": float(self.window.SupRes_precisionEntry.text()), # in nm
-                "sigma": float(self.window.SupRes_sigmaEntry.text()) # in pixel
+                "sigma": float(self.window.SupRes_sigmaEntry.text()), # in pixel
+                "keepFrom": float(self.window.SupRes_keepFrameFromEntry.text()),
+                "keepTo": float(self.window.SupRes_keepFrameToEntry.text())
                 }
             if self.window.SupRes_DBSCANCheck.isChecked():# Obtain parameters for DBSCAN if the method is required
                 self.SRparameters['DBSCAN'] = {
                 "eps": float(self.window.SupRes_EPSEntry.text()), # in nm
-                "min_sample": float(self.window.SupRes_minSampleEntry.text())
+                "min_sample": int(round(float(self.window.SupRes_minSampleEntry.text())))
                 }
+            if self.window.SupRes_lengthCalCheck.isChecked(): # Check if length calculation is required
+                self.SRparameters['length_calculation'] = True
+            else:
+                self.SRparameters['length_calculation'] = False
+
 
         except ValueError:
             self.showMessage('w', 'The parameters must be numbers.')
             return 0
 
         self.project.update_parameters(self.SRparameters)
+
         return 1
 
 
     def _createSRProject(self):
-        selected_attempt = self.window.SupRes_previousReconstructionAttemptSelector.currentText()
-        if selected_attempt != "New":
-            self.project = SuperResAnalysis(self.data_path) # Create project for super resolution analysis
-            self.project.path_result_main = self.previous_reconstruction_attempts[selected_attempt]
-            self.project.path_result_raw = self.project.path_result_main + '/raw'
-            return 1
+        self.project = SuperResAnalysis(self.window.SupRes_pathEntry.text()) # Create project for super resolution analysis
+        if self.project.error != 1:
+            self.showMessage('c', self.project.error)
+            return 0
         else:
-            self.project = SuperResAnalysis(self.data_path) # Create project for super resolution analysis
-            if self.project.error != 1:
-                self.showMessage('c', self.project.error)
-                return 0
-            else:
-                return 1
-
+            return 1
+            
 
     def _runSRReconstruction(self):
         self.initialiseProgress('Reconstructing SR images...', len(self.project.fov_paths))
@@ -835,7 +871,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Reconstruction completed.')
             )
         self.SRThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
         if self.SRparameters['fid_method'] == '': # if no fid method selected, skip. Otherwise trigger drift correction
             pass 
@@ -893,7 +929,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Drift correction completed.')
             )
         self.SRThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
         if 'DBSCAN' not in self.SRparameters.keys():
             pass 
@@ -948,7 +984,7 @@ class MainWindow(QMainWindow):
             lambda: self.updateLog('Cluster analysis completed.')
             )
         self.SRThread.finished.connect(
-            lambda: self.restProgress()
+            lambda: self.resetProgress()
             ) # Reset progress bar to rest
 
 
@@ -966,7 +1002,7 @@ Please see https://github.com/ekatrukha/ComDet/wiki/How-does-detection-work%3F f
 
 
     def helpTrevor(self):
-        self.showMessage('i', r"""                                                      Trevor
+        self.showMessage('i', r"""                                                      PyStar
 Parameters:
     Threshold: Pick out pixels with intensities over (μ+threshold*σ). Recommended value of threshold is 1. Higher value results in fewer dots.
     Size: Size of erosion disk. The size has to be an integer. Recommended value is 2. Higher value results in fewer dots.
@@ -979,11 +1015,42 @@ Image processing procedure:
             """)
 
 
+    def helpLiposomeAssay(self):
+        self.showMessage('i', r"""                                                      
+            Liposome Assay Analysis
+Parameters:
+    Threshold: Intensity threshold to only keep the particles has a signal above background + this threshold. The default value is 80.
+    
+Image processing procedure:
+    1. Get an averaged image if a stack is provided.
+    2. Cross-correlate the blank, sample images with ionomycin image to remove any drift.
+    3. Find local maxima from the ionomycin image and record their coordinates.
+    4. Obtain intensities of these coordinates from three images.
+    5. Calculate influx by (Isample-Iblank)/(Iionomycin-Iblank)*100%.
+
+Please see https://doi.org/10.1002/anie.201700966 for the published paper on liposome assay.
+            """)
+
+
+    def helpSuperRes(self):
+        self.showMessage("i", r"""
+            Super-resolution Image Analysis
+Please see README file on the Github page for detailed explaination for the methods.
+            """)
+
+
     def helpFrozen(self):
         self.showMessage('i', r"""
-If you encountered program freezing with the progress bar reached 100%, please restart the program and re-run the step you got stuck with (from the Tools command list).
+If you encountered program frozen after the progress bar reached 100%, please try to run the next step you want from the Analysis command list.
 Please contact Ron Xia (zx252@cam.ac.uk) if you keep having this problem. This is a known bug in the program which should be fixed in later releases. Thanks for your understanding.
             """)
+
+
+    def clickFolderSplitter(self):
+        self.folderSplitterPopup = SplitFolderPopup(parent=self)
+        self.folderSplitterPopup.window.show()
+        self.folderSplitterPopup.finished.connect(self.folderSplitterPopup.window.close)
+
 
 
 # Supporting widgets
@@ -1157,11 +1224,11 @@ class OrthogonalAnalysisPopup(QWidget):
         self.window = loader.load(ui_file, self.mainWindow)
         self.window.setWindowTitle('Orthogonal Analysis - ' + self.task)
 
-        self.window.oa_applyButton.clicked.connect(self.applyThresholds)
-        self.window.oa_defaultButton.clicked.connect(self.resetDefault)
-        self.window.oa_saveResultButton.clicked.connect(self.saveData)
-        self.window.oa_cancelButton.clicked.connect(self.cancel)
-        self.window.oa_plotSelector.currentIndexChanged.connect(self.applyThresholds)
+        self.window.oa_applyButton.clicked.connect(self._applyThresholds)
+        self.window.oa_defaultButton.clicked.connect(self._resetDefault)
+        self.window.oa_saveResultButton.clicked.connect(self._saveData)
+        self.window.oa_cancelButton.clicked.connect(self._cancel)
+        self.window.oa_plotSelector.currentIndexChanged.connect(self._applyThresholds)
 
         self._updateParticlePlot(self.org_df)
         self._plotIntnArea()
@@ -1240,34 +1307,61 @@ class OrthogonalAnalysisPopup(QWidget):
             plotHist(self.window.oa_nareaPlot, 'NArea', i, c)
         
 
-    def applyThresholds(self):
+    def _applyThresholds(self):
         self.thresholded_df = self.org_df.loc[self.org_df.IntPerArea >= self.window.oa_intperareaPlotLine.value()]
         self.thresholded_df = self.thresholded_df.loc[self.thresholded_df.NArea >= self.window.oa_nareaPlotLine.value()]
 
         self._updateParticlePlot(self.thresholded_df)
 
 
-    def resetDefault(self):
+    def _resetDefault(self):
         self.thresholded_df = self.org_df
         self._updateParticlePlot(self.org_df)
 
 
-    def saveData(self):
-        self.applyThresholds()
+    def _saveData(self):
+        self._applyThresholds()
 
         thred_path = self.parent.project.path_result_main + '/Thred_results'
         if os.path.isdir(thred_path) != True:
             os.mkdir(thred_path)
-        rm_list = ['FoV', 'NArea', 'IntegratedInt', 'IntPerArea']
-        keep_list = list(self.thresholded_df.columns.difference(rm_list)) # get list of conditions
-        output_df = self.thresholded_df.groupby(keep_list+ ['FoV']).size()
-        output_df = output_df.reset_index(drop=False)
-        output_df = output_df.groupby(keep_list).mean()
-        output_df = output_df.reset_index(drop=False)
-        output_df = output_df.rename(columns={0: "ParticlePerFoV"})
+
+        property_list = ['FoV', 'NArea', 'IntegratedInt', 'IntPerArea']
+        condition_list = list(self.thresholded_df.columns.difference(property_list)) # get list of conditions
+
+        # Count the number of particles per FoV
+        ParticlePerFoV_df = self.thresholded_df.groupby(['Well','FoV']).size() 
+        ParticlePerFoV_df = ParticlePerFoV_df.reset_index(drop=False)
+        
+        # Calculate the mean particle per FoV for each well
+        PPF_mean_df = ParticlePerFoV_df.groupby(['Well']).mean() 
+        PPF_mean_df = PPF_mean_df.reset_index(drop=False)
+        PPF_mean_df = PPF_mean_df.rename(columns={0: "ParticlePerFoV"})
+
+        # Calculate the mean of each property for each sample
+        property_mean_df = self.thresholded_df.groupby(condition_list).mean()
+        property_mean_df = property_mean_df.reset_index(drop=False)
+
+        # Left join two mean dfs
+        output_df = property_mean_df.merge(PPF_mean_df, on='Well', how='left')
+
+        # FoV contribution calculation
+        PPF_sum_df = ParticlePerFoV_df.groupby(['Well']).sum()
+        PPF_sum_df = PPF_sum_df.reset_index(drop=False)
+        PPF_sum_df = PPF_sum_df.rename(columns={0: "TotalParticleCounts"})
+        contrib_df = ParticlePerFoV_df.merge(PPF_sum_df, on='Well', how='right')
+        contrib_df['Contribution'] = contrib_df[0] / contrib_df['TotalParticleCounts']
+        contrib_df['FoV'] = contrib_df.apply(lambda x: x['FoV'].replace(x['Well'], ''), axis=1)
+        contrib_df = contrib_df.pivot(index='Well', columns='FoV', values='Contribution')
+        contrib_df = contrib_df.fillna(0)
+        contrib_df = contrib_df.reset_index(drop=False)
+
+        # Left join the output with FoV contributions
+        output_df = output_df.merge(contrib_df, on='Well', how='left')
 
         output_df['thred_IntPerArea'] = self.window.oa_intperareaPlotLine.value()
         output_df['thred_NArea'] = self.window.oa_nareaPlotLine.value()
+
         output_df.to_csv(thred_path + '/' + self.task  + '.csv')
         self.parent.updateLog('Thresholded result saved as ' + thred_path + '/' + self.task  + '.csv.')
         try:
@@ -1276,8 +1370,104 @@ class OrthogonalAnalysisPopup(QWidget):
             print(sys.exc_info())
 
 
-    def cancel(self):
+    def _cancel(self):
         self.finished.emit()
+
+
+
+# Plugins
+class SplitFolderPopup(QWidget):
+    finished = Signal()
+    def __init__(self, parent=None):
+        self.parent = parent
+
+        try:
+            self.mainWindow = self.parent.window
+        except AttributeError:
+            self.mainWindow = None
+        super(SplitFolderPopup, self).__init__(parent=self.mainWindow)
+        self.loadUI()
+
+
+    def loadUI(self):
+        path = os.path.join(os.path.dirname(__file__), "UI_form/FolderSplitter.ui")
+        ui_file = QFile(path)
+        if not ui_file.open(QIODevice.ReadOnly):
+            print(f"Cannot open {ui_file_name}: {ui_file.errorString()}")
+            sys.exit(-1)
+
+        loader = QUiLoader()
+        self.window = loader.load(ui_file, self.mainWindow)
+        self.window.buttonBox.button(self.window.buttonBox.Ok).clicked.connect(self._folderSplitter)
+        self.window.buttonBox.button(self.window.buttonBox.Cancel).clicked.connect(self._cancel)
+        self.window.moreConditionButton.clicked.connect(self._moreCondition)
+        self.window.conditionWidgetLayout = QGridLayout(self.window.conditionWidget)
+
+        self.conditionCount = 0 # initialise condition count
+        self._moreCondition()
+
+        ui_file.close()
+        if not self.window:
+            print(loader.errorString())
+            sys.exit(-1)
+
+
+    def _cancel(self):
+        self.finished.emit()
+
+
+    def _moreCondition(self):
+        if self.conditionCount == 0: # initiate condition box with two conditions
+            for i in range(0, 2):
+                self.window.conditionWidgetLayout.addWidget(QLabel(text='Condition ' + str(i), objectName='condition_' + str(i) + '_Label'), i, 0)
+                self.window.conditionWidgetLayout.addWidget(QLineEdit(objectName='condition_' + str(i)), i, 1)
+                self.window.conditionWidgetLayout.addWidget(QLabel(text='Identifier ' + str(i), objectName='identifier_' + str(i) + '_Label'), i, 2)
+                self.window.conditionWidgetLayout.addWidget(QLineEdit(objectName='identifier_' + str(i)), i, 3)
+            self.conditionCount = 2
+        else:
+            # add conditions
+            self.window.conditionWidgetLayout.addWidget(QLabel(text='Condition ' + str(self.conditionCount), objectName='condition_' + str(self.conditionCount) + '_Label'), self.conditionCount, 0)
+            self.window.conditionWidgetLayout.addWidget(QLineEdit(objectName='condition_' + str(self.conditionCount)), self.conditionCount, 1)
+            self.window.conditionWidgetLayout.addWidget(QLabel(text='Identifier ' + str(self.conditionCount), objectName='identifier_' + str(self.conditionCount) + '_Label'), self.conditionCount, 2)
+            self.window.conditionWidgetLayout.addWidget(QLineEdit(objectName='identifier_' + str(self.conditionCount)), self.conditionCount, 3)
+            self.conditionCount += 1
+
+
+    def _folderSplitter(self):
+        job_path = self.window.pathEntry.text()
+        if job_path == '':
+            msgBox = QMessageBox(self.mainWindow)
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setWindowTitle('Warning')
+            msgBox.setText('No path was specified.')
+            returnValue = msgBox.exec_()
+            return 0
+        elif os.path.isdir(job_path) != True:
+            msgBox = QMessageBox(self.mainWindow)
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setWindowTitle('Warning')
+            msgBox.setText('Path input was invalid.')
+            returnValue = msgBox.exec_()
+            return 0
+        else:
+            job_dict = {}
+            for i in range(0, self.conditionCount):
+                condition = self.window.findChild(QLineEdit, "condition_" + str(i)).text()
+                condition = condition.replace(" ", "")
+                if len(condition) != 0:
+                    identifier = self.window.findChild(QLineEdit, "identifier_" + str(i)).text()
+                    job_dict[identifier] = job_path + "_" + condition
+                    if os.path.isdir(job_dict[identifier]) == False:
+                        os.mkdir(job_dict[identifier])
+
+            for root, dirs, files in os.walk(job_path):
+                for f in files:
+                    for i in job_dict.keys():
+                        if i in f:
+                            shutil.move(os.path.join(root, f), os.path.join(job_dict[i], f))
+
+            self.finished.emit()
+            return 1
 
 
 

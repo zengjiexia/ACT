@@ -77,7 +77,7 @@ class DFLParticleFinder(QObject):
                 self.project.call_ComDet(size = self.size, threshold = self.threshold, progress_signal=self.progress, IJ=self.IJ)
             except:
                 print(sys.exc_info())
-        elif self.algorithm == 'Trevor':
+        elif self.algorithm == 'PyStar':
             try:
                 self.project.call_Trevor(erode_size = self.size, bg_thres = self.threshold, progress_signal=self.progress)
             except:
@@ -86,6 +86,7 @@ class DFLParticleFinder(QObject):
             pass
 
         self.finished.emit()
+        return 1
 
 
 class ReportWriter(QObject):
@@ -105,6 +106,7 @@ class ReportWriter(QObject):
             print(sys.exc_info())
 
         self.finished.emit()
+        return 1
 
 
 class LipoAssayWorker(QObject):
@@ -126,6 +128,7 @@ class LipoAssayWorker(QObject):
             print(sys.exc_info())
 
         self.finished.emit()
+        return 1
 
 
 class SRWorker(QObject):
@@ -144,6 +147,7 @@ class SRWorker(QObject):
         if self.job == 'Reconstruction':
             try:
                 self.project.superRes_reconstruction(progress_signal=self.progress, IJ=self.IJ)
+                print('returned from Reconstruction')
             except:
                 print(sys.exc_info())
         elif self.job == 'FiducialCorrection':
@@ -156,4 +160,8 @@ class SRWorker(QObject):
                 self.project.superRes_clustering(progress_signal=self.progress)
             except:
                 print(sys.exc_info())
+        else:
+            pass
+
         self.finished.emit()
+        return 1
