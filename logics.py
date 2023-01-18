@@ -759,8 +759,13 @@ class SuperResAnalysis:
 
         # Check if the images are stacks
         test_img = Image.open(list(self.fov_paths.values())[0])
-        self.img_frames = test_img.n_frames
-        print('Test image number of frames: ' + str(self.img_frames))
+        try:
+            self.img_frames = test_img.n_frames
+            print('Test image number of frames: ' + str(self.img_frames))
+        except TypeError:
+            self.error = 'The metadata of the first image was damaged. Please retry without it.'
+            return 0
+
         if self.img_frames < 2: 
             self.error = 'The images are not stacked. Please check.'
             return 0
@@ -798,7 +803,7 @@ class SuperResAnalysis:
         
 
     def superRes_reconstruction(self, progress_signal=None, IJ=None):
-
+        error_fields = []
         # Construct dirs for results
         self.timeStamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         self.path_result_main = (self.path_data_main + '_' + self.timeStamp + '_' + self.parameters['method'])
@@ -827,17 +832,25 @@ class SuperResAnalysis:
             imgFile = self.fov_paths[field]
             #saveto = os.path.join(self.path_result_raw, field)
             #saveto = saveto.replace("\\", "/")
-            img = IJ.io().open(imgFile)
-            IJ.ui().show(field, img)
-
-            self._compose_fiji_macro(field)
-            IJ.py.run_macro(self.macro)
+            try:
+                img = IJ.io().open(imgFile)
+            except: # Skip the image stack if there is an error in the image itself
+                error_fields.append(field)
+            else:
+                IJ.ui().show(field, img)
+                self._compose_fiji_macro(field)
+                IJ.py.run_macro(self.macro)
 
             if progress_signal == None:
                 pass
             else:
                 c += 1
                 progress_signal.emit(c)
+                
+        if len(error_fields) != 0:
+            self.error = 'Failed to open image ' + ','.join(error_fields) + ' . They were skipped.'
+        else:
+            self.error = 1
 
         return 1
 
@@ -879,6 +892,7 @@ class SuperResAnalysis:
             """
             IJ.py.run_macro(self.macro)
 
+
         elif self.parameters['method'] == 'GDSC SMLM 1':
             self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv") # Convert the GDSC result to TS format and save as _TS.csv
             self.macro = """
@@ -913,6 +927,7 @@ class SuperResAnalysis:
             close(\""""+field_name+"""_drift.tif\");
             """
             IJ.py.run_macro(self.macro)
+
 
         elif self.parameters['method'] == 'GDSC SMLM 1':
             self._GDSC_TS_IOadapter(GDSC_result=self.path_result_raw+ "/" + field_name+"_results.csv") # Convert the GDSC result to TS format and save as _TS.csv
@@ -949,21 +964,23 @@ class SuperResAnalysis:
             c = 0 # progress indicator
 
         for field in workload:
-            
-            if self.parameters['fid_method'] == 'Fiducial marker - ThunderSTORM':
-                self.path_result_fid = self.path_result_main + "/ThunderSTORM_FidMarker_" + str(self.parameters['max_distance']) + "_" + str(self.parameters['min_visibility'])
-                if os.path.isdir(self.path_result_fid) != 1:
-                    os.mkdir(self.path_result_fid)
+            if os.path.isfile(self.path_result_raw+ "/" + field +"_results.csv"):
+                if self.parameters['fid_method'] == 'Fiducial marker - ThunderSTORM':
+                    self.path_result_fid = self.path_result_main + "/ThunderSTORM_FidMarker_" + str(self.parameters['max_distance']) + "_" + str(self.parameters['min_visibility'])
+                    if os.path.isdir(self.path_result_fid) != 1:
+                        os.mkdir(self.path_result_fid)
 
-                self._fidCorr_TS_fiducialMarkers(field, IJ=IJ)
-                
+                    self._fidCorr_TS_fiducialMarkers(field, IJ=IJ)
+                    
 
-            elif self.parameters['fid_method'] == 'Cross-correlation - ThunderSTORM':
-                self.path_result_fid = self.path_result_main + "/ThunderSTORM_CrossCorrelation_" + str(self.parameters['bin_size']) + "_" + str(self.parameters['magnification'])
-                if os.path.isdir(self.path_result_fid) != 1:
-                    os.mkdir(self.path_result_fid)
+                elif self.parameters['fid_method'] == 'Cross-correlation - ThunderSTORM':
+                    self.path_result_fid = self.path_result_main + "/ThunderSTORM_CrossCorrelation_" + str(self.parameters['bin_size']) + "_" + str(self.parameters['magnification'])
+                    if os.path.isdir(self.path_result_fid) != 1:
+                        os.mkdir(self.path_result_fid)
 
-                self._fidCorr_TS_crossCorrelation(field, IJ=IJ)
+                    self._fidCorr_TS_crossCorrelation(field, IJ=IJ)
+            else:
+                print('Image at ' + field +' was not reconsturcted. Skipped')
                 
 
             if progress_signal == None:
@@ -982,7 +999,14 @@ class SuperResAnalysis:
             file_dir = os.path.join(self.path_result_fid, field_name+'_results.csv')
         else:
             file_dir = os.path.join(self.path_result_fid, field_name+'_corrected.csv')
-        df = pd.read_csv(file_dir)
+        try:
+            df = pd.read_csv(file_dir)
+        except pd.errors.EmptyDataError:
+            print('No localisation in the data.')
+            return 0
+        except FileNotFoundError:
+            print('Image of ' + field_name + ' was not reconsturcted.')
+            return 0
 
         # Filter spots based on chosen parameters
         # For GDSC, sigma-SD, precision-Precisions (for 2D images, X SD = Y SD)
@@ -1025,6 +1049,9 @@ class SuperResAnalysis:
             df = pd.read_csv(file_dir)
         except pd.errors.EmptyDataError:
             print('No localisation in the data.')
+            return 0
+        except FileNotFoundError:
+            print('Image of ' + field_name + ' was not reconsturcted.')
             return 0
 
         # The coordinates for localisations are in pixel for GDSC results and nm for TS results. This step unifies the unit to nm.
@@ -1182,7 +1209,10 @@ class SuperResAnalysis:
 
             
             report = self._cluster_DBSCAN(field)
-            report_df = pd.concat([report_df, report])
+            try:
+                report_df = pd.concat([report_df, report])
+            except TypeError:
+                print('Failed to run DBSCAN with ' + field + '.')
 
             if progress_signal == None:
                 pass

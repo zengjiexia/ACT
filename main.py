@@ -737,14 +737,19 @@ class MainWindow(QMainWindow):
         if  self.window.SupRes_FidCorrMethodSelector.currentText() == '':
             self.showMessage('w', 'No drift correction method was selected.')
         else:
-            guard = self._checkSRParameters()
+            try:
+                guard = self._checkSRParameters()
+            except AttributeError:
+                self.updateLog('Data at providing path was not super-resolved. Please click Reconstruction to start with.')
             if guard == 1:
-                
                 self._runSRFidCorr()
-
+                
 
     def clickSRClustering(self):
-        guard = self._checkSRParameters()
+        try:
+            guard = self._checkSRParameters()
+        except AttributeError:
+            self.updateLog('Data at providing path was not super-resolved. Please click Reconstruction to start with.')
         if guard == 1:
             self._runClustering()
 
@@ -821,6 +826,7 @@ class MainWindow(QMainWindow):
         self.project = SuperResAnalysis(self.window.SupRes_pathEntry.text()) # Create project for super resolution analysis
         if self.project.error != 1:
             self.showMessage('c', self.project.error)
+            self.project.error = 1
             return 0
         else:
             return 1
@@ -869,6 +875,9 @@ class MainWindow(QMainWindow):
         # Passing next job
         self.SRThread.finished.connect(
             lambda: self.updateLog('Reconstruction completed.')
+            )
+        self.SRThread.finished.connect(
+            lambda: self.updateLog(self.project.error) if self.project.error != 1 else False
             )
         self.SRThread.finished.connect(
             lambda: self.resetProgress()
