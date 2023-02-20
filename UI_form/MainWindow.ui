@@ -1035,6 +1035,7 @@
      <string>Tools</string>
     </property>
     <addaction name="actionFolder_Splitter"/>
+    <addaction name="actionFolder_Combiner"/>
    </widget>
    <addaction name="mainMenu"/>
    <addaction name="menuAnalysis"/>
@@ -1114,6 +1115,11 @@
   <action name="actionSuper_resolution_Image_Analysis">
    <property name="text">
     <string>Super-resolution Image Analysis</string>
+   </property>
+  </action>
+  <action name="actionFolder_Combiner">
+   <property name="text">
+    <string>Folder Combiner</string>
    </property>
   </action>
  </widget>

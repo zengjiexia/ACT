@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 import shutil
 
 import PySide6
@@ -66,6 +67,7 @@ class MainWindow(QMainWindow):
             # Tools
                 # Folder Splitter
         self.window.actionFolder_Splitter.triggered.connect(self.clickFolderSplitter)
+        self.window.actionFolder_Combiner.triggered.connect(self.clickFolderCombiner)
 
             # Help
         self.window.actionComDet.triggered.connect(self.helpComDet)
@@ -1061,6 +1063,12 @@ Please contact Ron Xia (zx252@cam.ac.uk) if you keep having this problem. This i
         self.folderSplitterPopup.finished.connect(self.folderSplitterPopup.window.close)
 
 
+    def clickFolderCombiner(self):
+        self.folderCombinerPopup = CombineFolderPopup(parent=self)
+        self.folderCombinerPopup.window.show()
+        self.folderCombinerPopup.finished.connect(self.folderCombinerPopup.window.close)
+
+
 
 # Supporting widgets
 class TagDataPopup(QWidget):
@@ -1477,6 +1485,103 @@ class SplitFolderPopup(QWidget):
 
             self.finished.emit()
             return 1
+
+
+
+class CombineFolderPopup(QWidget):
+    finished = Signal()
+    def __init__(self, parent=None):
+        self.parent = parent
+
+        try:
+            self.mainWindow = self.parent.window
+        except AttributeError:
+            self.mainWindow = None
+        super(CombineFolderPopup, self).__init__(parent=self.mainWindow)
+        self.loadUI()
+
+
+    def loadUI(self):
+        path = os.path.join(os.path.dirname(__file__), "UI_form/FolderCombiner.ui")
+        ui_file = QFile(path)
+        if not ui_file.open(QIODevice.ReadOnly):
+            print(f"Cannot open {ui_file_name}: {ui_file.errorString()}")
+            sys.exit(-1)
+
+        loader = QUiLoader()
+        self.window = loader.load(ui_file, self.mainWindow)
+        self.window.buttonBox.button(self.window.buttonBox.Ok).clicked.connect(self._folderCombiner)
+        self.window.buttonBox.button(self.window.buttonBox.Cancel).clicked.connect(self._cancel)
+
+        ui_file.close()
+        if not self.window:
+            print(loader.errorString())
+            sys.exit(-1)
+
+
+    def _cancel(self):
+        self.finished.emit()
+
+
+    def _folderCombiner(self):
+        main_path = self.window.mainPathEntry.text()
+        add_path = self.window.addPathEntry.text()
+        # Check the path inputs
+        if main_path == '' or add_path == '':
+            msgBox = QMessageBox(self.mainWindow)
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setWindowTitle('Warning')
+            msgBox.setText('No path was specified.')
+            returnValue = msgBox.exec_()
+            return 0
+        elif os.path.isdir(main_path) != True:
+            msgBox = QMessageBox(self.mainWindow)
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setWindowTitle('Warning')
+            msgBox.setText('Main path input was invalid.')
+            returnValue = msgBox.exec_()
+            return 0
+        elif os.path.isdir(add_path) != True:
+            msgBox = QMessageBox(self.mainWindow)
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setWindowTitle('Warning')
+            msgBox.setText('Additional path input was invalid.')
+            returnValue = msgBox.exec_()
+            return 0
+
+        # Get info from main path (Move at least 1 step from the original position)
+        X_max = 1
+        Y_max = 1
+        R_max = 1
+        W_max = 1
+        for f in os.listdir(main_path):
+            if f.endswith(".tif"):
+                loc = re.findall(r'X\d+Y\d+R\d+W\d+', f)[-1]
+                X_max = max([X_max, int(loc[1])])
+                Y_max = max([Y_max, int(loc[3])])
+                R_max = max([R_max, int(loc[5])])
+                W_max = max([W_max, int(loc[7])])
+
+        # Combine folder based on the method selected
+        method = self.window.methodSelector.currentText()
+
+        for f in os.listdir(add_path):
+            if f.endswith(".tif"):
+                loc = re.findall(r'X\d+Y\d+R\d+W\d+', f)[-1] # find the location info for each image
+                original_p = os.path.join(add_path, f) # the original path for the image
+
+                if method == 'Expand sample (Xn direction)':
+                    new_loc = loc[:1] + str(int(loc[1]) + X_max) + loc[2:]
+                elif method == 'Expand sample (Yn direction)':
+                    new_loc = loc[:3] + str(int(loc[3]) + Y_max) + loc[4:]
+                elif method == 'Expand FoV (match XnYn)':
+                    new_loc = loc[:5] + str(int(loc[5]) + R_max) + "W" + str(int(loc[7]) + W_max)
+
+                new_p = os.path.join(main_path, f.replace(loc, new_loc))
+                shutil.copy(original_p, new_p)
+
+        self.finished.emit()
+        return 1
 
 
 
