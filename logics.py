@@ -1110,7 +1110,7 @@ class SuperResAnalysis:
             cluster_df = cleaned_df.copy()
             cluster_df['DBSCAN_label'] += 1 # Change label from 0-based to 1-based
             cluster_df = pd.concat([cluster_df, placeholder], axis=0, join='outer', sort=False) # Combine placeholder with actual dataframe
-            cluster_df = pd.pivot_table(cluster_df, values='DBSCAN_label', index=['Y_mag'], columns=['X_mag'], aggfunc='max', fill_value=0) # Convert coordinate dataframe to array-like dataframe with index as Y, column as X, value as cluster label
+            cluster_df = pd.pivot_table(cluster_df, values='DBSCAN_label', index=['Y_mag'], columns=['X_mag'], aggfunc='max', fill_value=0, dropna=False) # Convert coordinate dataframe to array-like dataframe with index as Y, column as X, value as cluster label
 
             cluster_img = cluster_df.to_numpy() # convert pivot table to numpy array
 
