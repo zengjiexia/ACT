@@ -28,14 +28,15 @@ scyjava.config.add_option(f'-Dplugins.dir={plugins_dir}')
 
 class DiffractionLimitedAnalysis:
 
-    def __init__(self, data_path):
+    def __init__(self, data_path, parameters):
 
         self.error = 1 # When this value is 1, no error was detected in the object.
         self.path_program = os.path.dirname(__file__)
         self.path_data_main = data_path
+        self.parameters = parameters
 
         # Construct dirs for results
-        self.path_result_main = data_path + '_results'
+        self.path_result_main = data_path + '_results' + self.parameters
         if os.path.isdir(self.path_result_main) != 1:
             os.mkdir(self.path_result_main)
         self.path_result_raw = os.path.join(self.path_result_main, 'raw')
@@ -144,8 +145,8 @@ class DiffractionLimitedAnalysis:
                print('No spot found in FoV: ' + field)
             else:
                 img_dimensions = Image.open(imgFile).size
-                df = df.loc[(df['X_(px)'] >= img_dimensions[0] * 0.05) & (df['X_(px)'] <= img_dimensions[0] * 0.95)]
-                df = df.loc[(df['Y_(px)'] >= img_dimensions[1] * 0.05) & (df['Y_(px)'] <= img_dimensions[1] * 0.95)]
+                df = df.loc[(df['X_(px)'] >= img_dimensions[0] * 0.02) & (df['X_(px)'] <= img_dimensions[0] * 0.98)]
+                df = df.loc[(df['Y_(px)'] >= img_dimensions[1] * 0.02) & (df['Y_(px)'] <= img_dimensions[1] * 0.98)]
                 # Remove particles detected in the 5% pixels from the edges
                 df = df.reset_index(drop=True)
                 df.to_csv(saveto + '_results.csv')
@@ -368,7 +369,15 @@ class DiffractionLimitedAnalysis:
                 })
                 summary_report = pd.concat([summary_report, df_sum])
             except pd.errors.EmptyDataError:
-                pass
+                df_sum = pd.DataFrame.from_dict({
+                    'Well': [well],
+                    'NoOfFoV': [len(self.wells[well])],
+                    'ParticlePerFoV': [0],
+                    'MeanSize': [0],
+                    'MeanIntegrInt': [0],
+                    'MeanIntPerArea': [0]
+                })
+                summary_report = pd.concat([summary_report, df_sum])
             if progress_signal == None:
                 pass
             else:
