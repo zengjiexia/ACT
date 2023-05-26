@@ -1101,8 +1101,6 @@ class SuperResAnalysis:
 
         # Cluster profiling if cluster found
         if n_clusters != 0:
-            cleaned_labels = labels.copy()
-            cleaned_labels = cleaned_labels[cleaned_labels != -1]
 
             # Magnify the coordinates
             cleaned_df['X_mag'] = (cleaned_df['X'] * self.parameters['scale']).astype('int16')
