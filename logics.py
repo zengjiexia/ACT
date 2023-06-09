@@ -14,7 +14,7 @@ from skimage.measure import label, regionprops_table
 from sklearn.neighbors import NearestNeighbors
 from sklearn.cluster import DBSCAN
 from astropy.convolution import RickerWavelet2DKernel
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from scipy import ndimage
 from scipy.stats import norm
 import multiprocessing
@@ -767,21 +767,37 @@ class SuperResAnalysis:
 
 
         # Check if the images are stacks
-        test_img = Image.open(list(self.fov_paths.values())[0])
+        
         try:
+            # Try to open image with Image
+            test_img = Image.open(list(self.fov_paths.values())[0])
+            # Get image frame number
             self.img_frames = test_img.n_frames
             print('Test image number of frames: ' + str(self.img_frames))
+
+            # Get image dimensions
+            self.dimensions = test_img.size
+            print('Test image dimensions: ' + str(self.dimensions))
         except TypeError:
             self.error = 'The metadata of the first image was damaged. Please retry without it.'
             return 0
+        except UnidentifiedImageError:
+            # Open image with Tifffile
+            test_img = tiff.imread(list(self.fov_paths.values())[0])
+            # Get image frame number
+            self.img_frames = test_img.shape[0]
+            print('Test image number of frames: ' + str(self.img_frames))
+
+            # Get image dimensions
+            self.dimensions = test_img.shape[1:]
+            print('Test image dimensions: ' + str(self.dimensions))
 
         if self.img_frames < 2: 
             self.error = 'The images are not stacked. Please check.'
             return 0
 
-        # Get image dimensions
-        self.dimensions = test_img.size
-        print('Test image dimensions: ' + str(self.dimensions))
+
+        
 
         return 1
 
@@ -898,6 +914,7 @@ class SuperResAnalysis:
             selectWindow("Drift");
             saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
             close(\""""+field_name+"""_drift.tif\");
+            close("Averaged shifted histograms");
             """
             IJ.py.run_macro(self.macro)
 
@@ -915,6 +932,7 @@ class SuperResAnalysis:
             selectWindow("Drift");
             saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
             close(\""""+field_name+"""_drift.tif\");
+            close("Averaged shifted histograms");
             """
             IJ.py.run_macro(self.macro)
 
@@ -934,6 +952,7 @@ class SuperResAnalysis:
             selectWindow("Drift");
             saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
             close(\""""+field_name+"""_drift.tif\");
+            close("Averaged shifted histograms");
             """
             IJ.py.run_macro(self.macro)
 
@@ -951,6 +970,7 @@ class SuperResAnalysis:
             selectWindow("Drift");
             saveAs("tif",\""""+self.path_result_fid+"/"+field_name+"""_drift.tif\");
             close(\""""+field_name+"""_drift.tif\");
+            close("Averaged shifted histograms");
             """
             IJ.py.run_macro(self.macro)
 
