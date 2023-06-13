@@ -1,3 +1,8 @@
+"""
+Beta release for Revision of SR length measurement
+v2.1.1-beta
+update date: 20230613
+"""
 import sys
 import os
 import shutil
@@ -101,7 +106,7 @@ class MainWindow(QMainWindow):
             print(loader.errorString())
             sys.exit(-1)
         self.window.show()
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
 
 
     def updateLog(self, message):
@@ -137,7 +142,7 @@ class MainWindow(QMainWindow):
             msgBox.setIcon(QMessageBox.Information)
             msgBox.setWindowTitle('Information')
         msgBox.setText(message)
-        returnValue = msgBox.exec_()
+        returnValue = msgBox.exec()
 
 
     def loadDataPath(self):
@@ -1194,7 +1199,7 @@ class GroupingPopup(QWidget):
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle('Warning')
             msgBox.setText('Cannot select the same condition.')
-            returnValue = msgBox.exec_()
+            returnValue = msgBox.exec()
         else:
             self.output.emit(self.options[experimentSelection], self.options[xaxisSelection])
             self.finished.emit()
@@ -1453,14 +1458,14 @@ class SplitFolderPopup(QWidget):
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle('Warning')
             msgBox.setText('No path was specified.')
-            returnValue = msgBox.exec_()
+            returnValue = msgBox.exec()
             return 0
         elif os.path.isdir(job_path) != True:
             msgBox = QMessageBox(self.mainWindow)
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle('Warning')
             msgBox.setText('Path input was invalid.')
-            returnValue = msgBox.exec_()
+            returnValue = msgBox.exec()
             return 0
         else:
             job_dict = {}
@@ -1490,4 +1495,4 @@ if __name__ == "__main__":
     app.setWindowIcon(QIcon(os.path.join(os.path.dirname(__file__), "UI_form/lulu.ico")))
     main_window = MainWindow()
     main_window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
