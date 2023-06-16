@@ -1148,7 +1148,7 @@ class SuperResAnalysis:
 
             if self.parameters['length_calculation'] == True: # Run length calculation
 
-                def total_length_calculation_by_NN(skeleton):
+                def total_length_calculation_by_NN(skeleton, length_list_main, length_list_total):
                     # use this method when the main branch path cannot be built
                     xy = np.asarray(np.where(skeleton)).T
                     length = 0
@@ -1157,6 +1157,8 @@ class SuperResAnalysis:
                     for j in rng[0]:
                         length += sum(j)
                     length = length/2 + 1
+                    length_list_main.append(length)
+                    length_list_total.append(length)
                     return length
 
                 length_list_main = []
@@ -1168,16 +1170,15 @@ class SuperResAnalysis:
                     coor1 = coor[1]-np.min(coor[1])
                     cluster_canvas = np.zeros((np.max(coor0)+1, np.max(coor1)+1))
                     cluster_canvas[(coor0, coor1)] = 1
-                    closed_cluster = closing(cluster_canvas)
-                    cluster_skeleton = skeletonize(closed_cluster)
+                    #closed_cluster = closing(cluster_canvas)
+                    cluster_skeleton = skeletonize(cluster_canvas)
+                    #cluster_skeleton = skeletonize(closed_cluster)
                     try:
                         skeleton_summary = skan.summarize(skan.Skeleton(cluster_skeleton), find_main_branch=True)
                     except ValueError as ex:
                         print(ex)
                         print(f'Failed to build skeleton path for cluster No.{i}, calculating total length as main branch length.')
-                        length = total_length_calculation_by_NN(cluster_skeleton)
-                        length_list_main.append(length)
-                        length_list_total.append(length)
+                        total_length_calculation_by_NN(cluster_skeleton, length_list_main, length_list_total)
                     except Exception as ex: 
                         ex_type, ex_value, ex_traceback = sys.exc_info()
 
@@ -1194,15 +1195,18 @@ class SuperResAnalysis:
                         print("Exception message : %s" %ex_value)
                         print("Stack trace : %s" %stack_trace)
                         print(f"Exception at cluster No. {i}, calculating total length as main branch length.")
-                        length = total_length_calculation_by_NN(cluster_skeleton)
-                        length_list_main.append(length)
-                        length_list_total.append(length)
+                        total_length_calculation_by_NN(cluster_skeleton, length_list_main, length_list_total)
                     else:
                         skeleton_summary = skeleton_summary.groupby(['main']).sum().reset_index()
-                        length_list_main.append(float(skeleton_summary.loc[skeleton_summary['main'] == True]['euclidean-distance']))
-                        length_list_total.append(float(skeleton_summary['euclidean-distance'].sum()))
+                        try:
+                            length_list_main.append(float(skeleton_summary.loc[skeleton_summary['main'] == True]['euclidean-distance']))
+                        except TypeError:
+                            print(f'Failed to build skeleton path for cluster No.{i}, calculating total length as main branch length.')
+                            total_length_calculation_by_NN(cluster_skeleton, length_list_main, length_list_total)
+                        else:
+                            length_list_total.append(float(skeleton_summary['euclidean-distance'].sum()))
 
-                
+                    
             cluster_profile = regionprops_table(cluster_img, properties=['label', 'area', 'centroid', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity','bbox']) # Profile the aggregates
 
             if self.parameters['length_calculation'] == True:
