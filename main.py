@@ -1097,7 +1097,7 @@ class TagDataPopup(QWidget):
         self.window = loader.load(ui_file, self.mainWindow)
 
         self.window.loadButton.clicked.connect(self.clickLoadButton)
-        self.window.buttonBox.button(self.window.buttonBox.Apply).clicked.connect(self._applyTags)
+        self.window.buttonBox.button(self.window.buttonBox.StandardButton.Apply).clicked.connect(self._applyTags)
 
         ui_file.close()
         if not self.window:
@@ -1157,7 +1157,7 @@ class GroupingPopup(QWidget):
         loader = QUiLoader()
 
         self.window = loader.load(ui_file, self.mainWindow)
-        self.window.buttonBox.button(self.window.buttonBox.Apply).clicked.connect(self.clickedApply)
+        self.window.buttonBox.button(self.window.buttonBox.StandardButton.Apply).clicked.connect(self.clickedApply)
 
         rm_list = ['NoOfFoV', 'ParticlePerFoV', 'MeanSize', 'MeanIntegrInt', 'MeanIntPerArea']
         df = pd.read_csv(self.parent.project.path_result_main + '/Summary.csv')
@@ -1416,8 +1416,8 @@ class SplitFolderPopup(QWidget):
 
         loader = QUiLoader()
         self.window = loader.load(ui_file, self.mainWindow)
-        self.window.buttonBox.button(self.window.buttonBox.Ok).clicked.connect(self._folderSplitter)
-        self.window.buttonBox.button(self.window.buttonBox.Cancel).clicked.connect(self._cancel)
+        self.window.buttonBox.button(self.window.buttonBox.StandardButton.Ok).clicked.connect(self._folderSplitter)
+        self.window.buttonBox.button(self.window.buttonBox.StandardButton.Cancel).clicked.connect(self._cancel)
         self.window.moreConditionButton.clicked.connect(self._moreCondition)
         self.window.conditionWidgetLayout = QGridLayout(self.window.conditionWidget)
 
