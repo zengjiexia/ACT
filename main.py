@@ -160,29 +160,22 @@ class MainWindow(QMainWindow):
 
 
     def clickDFLSPGenerateReports(self):
-        data_path = self.window.DFLSP_pathEntry.text()
-        self.data_path = data_path.replace('_results' + self.parameters, '')
-        self.window.DFLSP_pathEntry.setText(self.data_path)
         guard = self._checkDFLSPParameters()
         if guard == 1:
-            if os.path.isdir(self.data_path + '_results' + self.parameters) ==False:
+            if not os.path.isdir(self.project.path_result_main):
                 self.showMessage('w', 'This dataset has not been analysed. Please run analysis.')
             else:
-
-                self.updateLog('Data path set to '+data_path)
+                self.updateLog('Data path set to '+ self.data_path)
                 self._generateDFLSPReports()
 
 
     def clickDFLSPReadTaggedResults(self):
-        data_path = self.window.DFLSP_pathEntry.text()
-        self.data_path = data_path.replace('_results' + self.parameters, '')
-        self.window.DFLSP_pathEntry.setText(self.data_path)
         guard = self._checkDFLSPParameters()
         if guard == 1:
-            if os.path.isdir(self.data_path + '_results' + self.parameters) ==False:
+            if not os.path.isdir(self.project.path_result_main):
                 self.showMessage('w', 'This dataset has not been analysed. Please run analysis.')
             else:
-                self.updateLog('Data path set to '+data_path)
+                self.updateLog('Data path set to '+ self.data_path)
                 self._showDFLSPResult()
                 self.window.DFLSP_tagButton.setEnabled(True)
                 self.window.DFLSP_oaButton.setEnabled(True)
@@ -196,8 +189,6 @@ class MainWindow(QMainWindow):
             return 0
         else:
             self.data_path = data_path
-            self.window.DFLSP_pathEntry.setText(self.data_path)
-            self.updateLog('Data path set to '+data_path)
 
         # Get the method for analysis
         self.method = self.window.DFLSP_methodSelector.currentText()
@@ -227,6 +218,10 @@ class MainWindow(QMainWindow):
             self.updateLog('Estimated particle size set as '+str(self.size)+' pixels.')
 
         self.parameters = '_' + self.method + '_' + str(self.threshold) + '_' + str(self.size)
+        self.data_path = self.data_path.replace('_results' + self.parameters, '')
+        self.window.DFLSP_pathEntry.setText(self.data_path)
+        self.updateLog('Data path set to '+data_path)
+
         self.project = DiffractionLimitedAnalysis(self.data_path, self.parameters) # Creat DiffractionLimitedAnalysis object
         if self.project.error == 1:
             return 1
