@@ -428,14 +428,14 @@ class LiposomeAssayAnalysis:
         self.path_result_main = data_path + '_results'
         if os.path.isdir(self.path_result_main) != 1:
             os.mkdir(self.path_result_main)
-        self.path_result_raw = os.path.join(self.path_result_main, 'raw')
+        self.path_result_raw = os.path.join(self.path_result_main, 'Samples')
         if os.path.isdir(self.path_result_raw) != 1:
             os.mkdir(self.path_result_raw)
         self.gather_project_info()
 
 
     def gather_project_info(self):
-        samples = [name for name in os.listdir(self.path_data_main) if not name.startswith('.') and name != 'results']
+        samples = [name for name in os.listdir(self.path_data_main) if os.path.isdir(os.path.join(self.path_data_main, name))]
         if 'Ionomycin' in samples:
             self.samples = [self.path_data_main]
         else:
@@ -490,6 +490,7 @@ class LiposomeAssayAnalysis:
 
             centre_ = (Ionomycin.shape[0]/2, Ionomycin.shape[1]/2)
             # 2d fourier transform of averaged images
+
             FIonomycin = np.fft.fft2(Ionomycin)
             FSample = np.fft.fft2(Sample)
             FBlank = np.fft.fft2(Blank)
@@ -511,13 +512,11 @@ class LiposomeAssayAnalysis:
             IS_y_offset = j-centre_[0]
             IB_x_offset = g-centre_[1]
             IB_y_offset = k-centre_[0]
-
             # Correction
-            MIS = np.float64([[1, 0, IS_y_offset], [0, 1, IS_x_offset]])
+            MIS = np.float64([[1, 0, *IS_y_offset], [0, 1, *IS_x_offset]])
             Corrected_Sample = cv2.warpAffine(Sample, MIS, Ionomycin.shape)
-            MIB = np.float64([[1, 0, IB_y_offset], [0, 1, IB_x_offset]])
+            MIB = np.float64([[1, 0, *IB_y_offset], [0, 1, *IB_x_offset]])
             Corrected_Blank = cv2.warpAffine(Blank, MIB, Ionomycin.shape)
-
             return Corrected_Sample, Corrected_Blank
 
 
@@ -581,7 +580,7 @@ class LiposomeAssayAnalysis:
             """ 
             influx_df['Influx'] = [100 if i >= 100 and i <= 110 else i for i in influx_df['Influx']]
             influx_df['Influx'] = [0 if i <= 0 and i >= -10 else i for i in influx_df['Influx']]
-            influx_df['Influx'] = ['error' if ms.isnan(np.float(i)) or i < -10 or i > 110 else i for i in influx_df['Influx']]
+            influx_df['Influx'] = ['error' if ms.isnan(float(i)) or i < -10 or i > 110 else i for i in influx_df['Influx']]
 
             ### Generate a dataframe which contains the result of current FoV ###
             field_result = pd.concat([
@@ -617,13 +616,11 @@ class LiposomeAssayAnalysis:
 
 
         def process_img(img_index, workload, threshold):
-
             sample = workload[img_index]
             sample_summary = pd.DataFrame()
 
             # report which sample is running to log window
             #pass_log('Running sample: ' + sample)
-            
             ionomycin_path = os.path.join(sample, 'Ionomycin')
             sample_path = os.path.join(sample, 'Sample')
             blank_path = os.path.join(sample, 'Blank')
@@ -634,7 +631,7 @@ class LiposomeAssayAnalysis:
             ### Obtain filenames for fields of view ###
             field_names = extract_filename(ionomycin_path)
 
-            for field in field_names:
+            for field in tqdm(field_names, desc=f'Processing FoVs in {sample}'):
                 ### Average tiff files ###
                 ionomycin_mean = average_frame(os.path.join(ionomycin_path, field))
                 sample_mean = average_frame(os.path.join(sample_path, field))
@@ -645,8 +642,9 @@ class LiposomeAssayAnalysis:
 
                 ### Locate the peaks on the ionomycin image ###
                 peaks = peak_locating(ionomycin_mean, threshold)
-                
+
                 if len(peaks) == 0:
+
                     #pass_log('Field ' + field + ' of sample ' + sample +' ignored due to no liposome located in this FoV.')
                     field_summary = pd.DataFrame({
                         "FoV": [field],
@@ -657,6 +655,7 @@ class LiposomeAssayAnalysis:
                         })
                     sample_summary = pd.concat([sample_summary, field_summary])
                 else:
+
                     ### Calculate the intensities of peaks with certain radius (in pixel) ###
                     ionomycin_intensity = intensities(ionomycin_mean, peaks)
                     sample_intensity = intensities(sample_aligned, peaks)
@@ -669,6 +668,7 @@ class LiposomeAssayAnalysis:
                     field_result.to_csv(os.path.join(sample.replace(self.path_data_main, self.path_result_raw), field+".csv"))
 
                     sample_summary = pd.concat([sample_summary, field_summary])
+
             sample_summary.to_csv(sample.replace(self.path_data_main, self.path_result_raw) + ".csv")
 
 
