@@ -128,6 +128,7 @@ dependencies:
   - pyerfa=2.0.0.3=py38hbaf524b_0
   - pyimagej=1.0.2=py38haa244fe_1
   - pyparsing=3.0.9=pyhd8ed1ab_0
+  - pyqtgraph=0.13.3=pyhd8ed1ab_0
   - pyside6=6.5.1=py38hac9af9c_0
   - pysocks=1.7.1=pyh0701188_6
   - python=3.8.16=h4de0772_1_cpython

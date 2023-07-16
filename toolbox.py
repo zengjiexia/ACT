@@ -147,7 +147,6 @@ class SRWorker(QObject):
         if self.job == 'Reconstruction':
             try:
                 self.project.superRes_reconstruction(progress_signal=self.progress, IJ=self.IJ)
-                print('returned from Reconstruction')
             except:
                 print(sys.exc_info())
         elif self.job == 'FiducialCorrection':

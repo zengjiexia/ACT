@@ -1,7 +1,7 @@
 """
-Beta release for Revision of SR length measurement
-v2.1.1-beta
-update date: 20230613
+Beta-2 release for Revision of SR length measurement
+v2.1.1-beta-2
+update date: 20230716
 """
 import sys
 import os

@@ -37,30 +37,28 @@ Requirements
 
 Full list please see ACT_python3.yml.
 
-- Python 3 (tested with Python 3.6-3.9)
-	- os
-	- sys
-	- re
-	- datatime
-	- [opencv - 4.7.0.72](https://pypi.org/project/opencv-contrib-python/)
-	- [tqdm - 4.65.0](https://anaconda.org/conda-forge/tqdm)
+- Python 3 (configured with Python 3.8.16)
 	- [astropy - 5.2.2](https://www.astropy.org/)
-	- [Pillow - 9.5.0](https://anaconda.org/conda-forge/pillow)
-	- [scipy - 1.10.1](https://www.scipy.org/)
-	- [numpy](https://numpy.org/)
-	- [math](https://docs.python.org/3/library/math.html)
-	- [tifffile](https://anaconda.org/conda-forge/tifffile)
-	- [pandas - 1.4.1](https://pandas.pydata.org/)
-	- [scikit-image - 0.19.3](https://scikit-image.org/)
-	- [scikit-learn - 1.2.2](https://scikit-learn.org/)
-	- [PySide 6 - 6.5.1](https://anaconda.org/conda-forge/pyside6)
-	- [pyqtgraph](https://github.com/pyqtgraph/pyqtgraph)(Included locally)
+	- [imageio - 2.31.1](https://anaconda.org/conda-forge/imageio)
+	- [imglyb - 2.1.0](https://anaconda.org/conda-forge/imglyb)
+	- [maven - 3.6.3](https://anaconda.org/conda-forge/maven)
+	- [numpy - 1.24.3](https://numpy.org/)
+	- [opencv-contrib-python - 4.7.0.72](https://pypi.org/project/opencv-contrib-python/)
+    - [openjdk - 8.0.332](https://anaconda.org/conda-forge/openjdk)
+    - [pandas - 1.4.1](https://pandas.pydata.org/)
 	- [pathos](https://anaconda.org/conda-forge/pathos)
+	- [pillow - 9.5.0](https://anaconda.org/conda-forge/pillow)
 	- [psutil](https://anaconda.org/conda-forge/psutil)
     - [pyimagej - 1.0.2](https://github.com/imagej/pyimagej) (must install with conda-forge)
+	- [pyqtgraph - 0.13.3](https://github.com/pyqtgraph/pyqtgraph)
+    - [PySide 6 - 6.5.1](https://anaconda.org/conda-forge/pyside6)
+	- [scikit-image - 0.19.3](https://scikit-image.org/)
+	- [scikit-learn - 1.2.2](https://scikit-learn.org/)
+	- [scipy - 1.10.1](https://www.scipy.org/)
+    - [scyjava - 1.9.0](https://anaconda.org/conda-forge/scyjava)
     - [skan - 0.11.0](https://github.com/jni/skan)
-    - [maven - 3.6.3](https://anaconda.org/conda-forge/maven)
-    - Openjdk - 8
+	- [tifffile - 2023.4.12](https://anaconda.org/conda-forge/tifffile)
+	- [tqdm - 4.65.0](https://anaconda.org/conda-forge/tqdm)
 
 - [Fiji(is just imagej)](https://imagej.net/Fiji) 
 	- [ComDet](https://github.com/ekatrukha/ComDet)

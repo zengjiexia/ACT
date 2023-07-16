@@ -1,7 +1,7 @@
 """
-Beta release for Revision of SR length measurement
-v2.1.1-beta
-update date: 20230613
+Beta-2 release for Revision of SR length measurement
+v2.1.1-beta-2
+update date: 20230716
 """
 import os
 import re
@@ -9,6 +9,8 @@ import sys
 import traceback
 from datetime import datetime
 import cv2
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
