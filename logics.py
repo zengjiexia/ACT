@@ -1,7 +1,16 @@
+"""
+Beta-2 release for Revision of SR length measurement
+v2.1.1-beta-2
+update date: 20230716
+"""
 import os
 import re
+import sys
+import traceback
 from datetime import datetime
 import cv2
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
@@ -9,8 +18,9 @@ import math as ms
 import tifffile as tiff
 import imagej
 from skimage import io
-from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruction, skeletonize_3d, closing
+from skimage.morphology import disk, erosion, dilation, white_tophat, reconstruction, skeletonize, closing
 from skimage.measure import label, regionprops_table
+import skan
 from sklearn.neighbors import NearestNeighbors
 from sklearn.cluster import DBSCAN
 from astropy.convolution import RickerWavelet2DKernel
@@ -420,14 +430,14 @@ class LiposomeAssayAnalysis:
         self.path_result_main = data_path + '_results'
         if os.path.isdir(self.path_result_main) != 1:
             os.mkdir(self.path_result_main)
-        self.path_result_raw = os.path.join(self.path_result_main, 'raw')
+        self.path_result_raw = os.path.join(self.path_result_main, 'Samples')
         if os.path.isdir(self.path_result_raw) != 1:
             os.mkdir(self.path_result_raw)
         self.gather_project_info()
 
 
     def gather_project_info(self):
-        samples = [name for name in os.listdir(self.path_data_main) if not name.startswith('.') and name != 'results']
+        samples = [name for name in os.listdir(self.path_data_main) if os.path.isdir(os.path.join(self.path_data_main, name))]
         if 'Ionomycin' in samples:
             self.samples = [self.path_data_main]
         else:
@@ -482,6 +492,7 @@ class LiposomeAssayAnalysis:
 
             centre_ = (Ionomycin.shape[0]/2, Ionomycin.shape[1]/2)
             # 2d fourier transform of averaged images
+
             FIonomycin = np.fft.fft2(Ionomycin)
             FSample = np.fft.fft2(Sample)
             FBlank = np.fft.fft2(Blank)
@@ -503,13 +514,11 @@ class LiposomeAssayAnalysis:
             IS_y_offset = j-centre_[0]
             IB_x_offset = g-centre_[1]
             IB_y_offset = k-centre_[0]
-
             # Correction
-            MIS = np.float64([[1, 0, IS_y_offset], [0, 1, IS_x_offset]])
+            MIS = np.float64([[1, 0, *IS_y_offset], [0, 1, *IS_x_offset]])
             Corrected_Sample = cv2.warpAffine(Sample, MIS, Ionomycin.shape)
-            MIB = np.float64([[1, 0, IB_y_offset], [0, 1, IB_x_offset]])
+            MIB = np.float64([[1, 0, *IB_y_offset], [0, 1, *IB_x_offset]])
             Corrected_Blank = cv2.warpAffine(Blank, MIB, Ionomycin.shape)
-
             return Corrected_Sample, Corrected_Blank
 
 
@@ -573,7 +582,7 @@ class LiposomeAssayAnalysis:
             """ 
             influx_df['Influx'] = [100 if i >= 100 and i <= 110 else i for i in influx_df['Influx']]
             influx_df['Influx'] = [0 if i <= 0 and i >= -10 else i for i in influx_df['Influx']]
-            influx_df['Influx'] = ['error' if ms.isnan(np.float(i)) or i < -10 or i > 110 else i for i in influx_df['Influx']]
+            influx_df['Influx'] = ['error' if ms.isnan(float(i)) or i < -10 or i > 110 else i for i in influx_df['Influx']]
 
             ### Generate a dataframe which contains the result of current FoV ###
             field_result = pd.concat([
@@ -609,13 +618,11 @@ class LiposomeAssayAnalysis:
 
 
         def process_img(img_index, workload, threshold):
-
             sample = workload[img_index]
             sample_summary = pd.DataFrame()
 
             # report which sample is running to log window
             #pass_log('Running sample: ' + sample)
-            
             ionomycin_path = os.path.join(sample, 'Ionomycin')
             sample_path = os.path.join(sample, 'Sample')
             blank_path = os.path.join(sample, 'Blank')
@@ -626,7 +633,7 @@ class LiposomeAssayAnalysis:
             ### Obtain filenames for fields of view ###
             field_names = extract_filename(ionomycin_path)
 
-            for field in field_names:
+            for field in tqdm(field_names, desc=f'Processing FoVs in {sample}'):
                 ### Average tiff files ###
                 ionomycin_mean = average_frame(os.path.join(ionomycin_path, field))
                 sample_mean = average_frame(os.path.join(sample_path, field))
@@ -637,8 +644,9 @@ class LiposomeAssayAnalysis:
 
                 ### Locate the peaks on the ionomycin image ###
                 peaks = peak_locating(ionomycin_mean, threshold)
-                
+
                 if len(peaks) == 0:
+
                     #pass_log('Field ' + field + ' of sample ' + sample +' ignored due to no liposome located in this FoV.')
                     field_summary = pd.DataFrame({
                         "FoV": [field],
@@ -649,6 +657,7 @@ class LiposomeAssayAnalysis:
                         })
                     sample_summary = pd.concat([sample_summary, field_summary])
                 else:
+
                     ### Calculate the intensities of peaks with certain radius (in pixel) ###
                     ionomycin_intensity = intensities(ionomycin_mean, peaks)
                     sample_intensity = intensities(sample_aligned, peaks)
@@ -661,6 +670,7 @@ class LiposomeAssayAnalysis:
                     field_result.to_csv(os.path.join(sample.replace(self.path_data_main, self.path_result_raw), field+".csv"))
 
                     sample_summary = pd.concat([sample_summary, field_summary])
+
             sample_summary.to_csv(sample.replace(self.path_data_main, self.path_result_raw) + ".csv")
 
 
@@ -795,9 +805,6 @@ class SuperResAnalysis:
         if self.img_frames < 2: 
             self.error = 'The images are not stacked. Please check.'
             return 0
-
-
-        
 
         return 1
 
@@ -1142,30 +1149,71 @@ class SuperResAnalysis:
             cluster_img = cluster_df.to_numpy() # convert pivot table to numpy array
 
             if self.parameters['length_calculation'] == True: # Run length calculation
-                num_clus = np.max(cluster_img)
-                length_list = []
-                for i in range(1, num_clus+1):
-                    coor = np.where(cluster_img == i)
-                    coor0 = coor[0]-np.min(coor[0])
-                    coor1 = coor[1]-np.min(coor[1])
-                    clus_area = np.zeros((np.max(coor0)+1, np.max(coor1)+1))
-                    clus_area[(coor0, coor1)] = 1
-                    clus_area_close = closing(clus_area)
-                    clus_skele = skeletonize_3d(clus_area_close)
-                    xy = np.asarray(np.where(clus_skele)).T
+
+                def total_length_calculation_by_NN(skeleton, length_list_main, length_list_total):
+                    # use this method when the main branch path cannot be built
+                    xy = np.asarray(np.where(skeleton)).T
                     length = 0
                     nbrs = NearestNeighbors(radius = 1.5, algorithm='auto').fit(xy)
                     rng = nbrs.radius_neighbors(xy)
                     for j in rng[0]:
                         length += sum(j)
                     length = length/2 + 1
-                    length_list.append(length)
+                    length_list_main.append(length)
+                    length_list_total.append(length)
+                    return length
 
+                length_list_main = []
+                length_list_total = []
 
+                for i in tqdm(range(1, n_clusters+1), desc=f'Calculating cluster length for {field_name}'):
+                    coor = np.where(cluster_img == i)
+                    coor0 = coor[0]-np.min(coor[0])
+                    coor1 = coor[1]-np.min(coor[1])
+                    cluster_canvas = np.zeros((np.max(coor0)+1, np.max(coor1)+1))
+                    cluster_canvas[(coor0, coor1)] = 1
+                    #closed_cluster = closing(cluster_canvas)
+                    cluster_skeleton = skeletonize(cluster_canvas)
+                    #cluster_skeleton = skeletonize(closed_cluster)
+                    try:
+                        skeleton_summary = skan.summarize(skan.Skeleton(cluster_skeleton), find_main_branch=True)
+                    except ValueError as ex:
+                        print(ex)
+                        print(f'Failed to build skeleton path for cluster No.{i}, calculating total length as main branch length.')
+                        total_length_calculation_by_NN(cluster_skeleton, length_list_main, length_list_total)
+                    except Exception as ex: 
+                        ex_type, ex_value, ex_traceback = sys.exc_info()
+
+                        # Extract unformatter stack traces as tuples
+                        trace_back = traceback.extract_tb(ex_traceback)
+
+                        # Format stacktrace
+                        stack_trace = list()
+
+                        for trace in trace_back:
+                            stack_trace.append("File : %s , Line : %d, Func.Name : %s, Message : %s" % (trace[0], trace[1], trace[2], trace[3]))
+
+                        print("Exception type : %s " % ex_type.__name__)
+                        print("Exception message : %s" %ex_value)
+                        print("Stack trace : %s" %stack_trace)
+                        print(f"Exception at cluster No. {i}, calculating total length as main branch length.")
+                        total_length_calculation_by_NN(cluster_skeleton, length_list_main, length_list_total)
+                    else:
+                        skeleton_summary = skeleton_summary.groupby(['main']).sum().reset_index()
+                        try:
+                            length_list_main.append(float(skeleton_summary.loc[skeleton_summary['main'] == True]['euclidean-distance']))
+                        except TypeError:
+                            print(f'Failed to build skeleton path for cluster No.{i}, calculating total length as main branch length.')
+                            total_length_calculation_by_NN(cluster_skeleton, length_list_main, length_list_total)
+                        else:
+                            length_list_total.append(float(skeleton_summary['euclidean-distance'].sum()))
+
+                    
             cluster_profile = regionprops_table(cluster_img, properties=['label', 'area', 'centroid', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity','bbox']) # Profile the aggregates
 
             if self.parameters['length_calculation'] == True:
-                cluster_profile['length'] = length_list # Add the length result to the profile
+                cluster_profile['length_main_branch'] = length_list_main # Add the length result to the profile
+                cluster_profile['length_all_branches'] = length_list_total
 
             cluster_profile = pd.DataFrame(cluster_profile)
 
@@ -1174,22 +1222,31 @@ class SuperResAnalysis:
 
 
             if self.parameters['length_calculation'] == True:
-                cluster_profile.columns = ['cluster_id', 'area', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax', 'length', 'n_localisation']
+                cluster_profile.columns = ['cluster_id', 'area', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax', 'length_main_branch', 'length_all_branches', 'n_localisation']
+                summary = cluster_profile.agg({
+                'cluster_id': 'max',
+                'n_localisation' : ['max', 'min', 'mean'],
+                'area': ['max', 'min', 'mean'],
+                'convex_area': ['max', 'min', 'mean'],
+                'major_axis_length' : ['max', 'min', 'mean'],
+                'eccentricity': ['max', 'min', 'mean'],
+                'length_main_branch': ['max', 'min', 'mean'],
+                'length_all_branches': ['max', 'min', 'mean']
+                })
             else:
                 cluster_profile.columns = ['cluster_id', 'area', 'X_(px)', 'Y_(px)', 'convex_area', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'xMin', 'yMin', 'xMax', 'yMax', 'n_localisation']
-
-            # Save cluster profile file
-            cluster_profile.to_csv(os.path.join(self.path_result_fid, field_name+'_clusterProfile_' + str(self.parameters['DBSCAN']['eps']) + '_' + str(self.parameters['DBSCAN']['min_sample']) + '.csv'))
-
-            summary = cluster_profile.agg({
+                summary = cluster_profile.agg({
                 'cluster_id': 'max',
                 'n_localisation' : ['max', 'min', 'mean'],
                 'area': ['max', 'min', 'mean'],
                 'convex_area': ['max', 'min', 'mean'],
                 'major_axis_length' : ['max', 'min', 'mean'],
                 'eccentricity': ['max', 'min', 'mean']
-            })
+                })
             summary.at['max', 'n_noise'] = n_noise
+            # Save cluster profile file
+            cluster_profile.to_csv(os.path.join(self.path_result_fid, field_name+'_clusterProfile_' + str(self.parameters['DBSCAN']['eps']) + '_' + str(self.parameters['DBSCAN']['min_sample']) + '.csv'))
+
         else:
             summary = pd.DataFrame({
                 'cluster_id': [0, '', ''],
@@ -1233,8 +1290,8 @@ class SuperResAnalysis:
                 self._cluster_dataFiltering(field)
             except KeyError:
                 print('Filtering is not selected.')
+                pass
 
-            
             report = self._cluster_DBSCAN(field)
             try:
                 report_df = pd.concat([report_df, report])

@@ -1,3 +1,8 @@
+"""
+Beta-2 release for Revision of SR length measurement
+v2.1.1-beta-2
+update date: 20230716
+"""
 import sys
 import os
 import shutil
@@ -101,7 +106,7 @@ class MainWindow(QMainWindow):
             print(loader.errorString())
             sys.exit(-1)
         self.window.show()
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
 
 
     def updateLog(self, message):
@@ -137,7 +142,7 @@ class MainWindow(QMainWindow):
             msgBox.setIcon(QMessageBox.Information)
             msgBox.setWindowTitle('Information')
         msgBox.setText(message)
-        returnValue = msgBox.exec_()
+        returnValue = msgBox.exec()
 
 
     def loadDataPath(self):
@@ -155,29 +160,22 @@ class MainWindow(QMainWindow):
 
 
     def clickDFLSPGenerateReports(self):
-        data_path = self.window.DFLSP_pathEntry.text()
-        self.data_path = data_path.replace('_results' + self.parameters, '')
-        self.window.DFLSP_pathEntry.setText(self.data_path)
         guard = self._checkDFLSPParameters()
         if guard == 1:
-            if os.path.isdir(self.data_path + '_results' + self.parameters) ==False:
+            if not os.path.isdir(self.project.path_result_main):
                 self.showMessage('w', 'This dataset has not been analysed. Please run analysis.')
             else:
-
-                self.updateLog('Data path set to '+data_path)
+                self.updateLog('Data path set to '+ self.data_path)
                 self._generateDFLSPReports()
 
 
     def clickDFLSPReadTaggedResults(self):
-        data_path = self.window.DFLSP_pathEntry.text()
-        self.data_path = data_path.replace('_results' + self.parameters, '')
-        self.window.DFLSP_pathEntry.setText(self.data_path)
         guard = self._checkDFLSPParameters()
         if guard == 1:
-            if os.path.isdir(self.data_path + '_results' + self.parameters) ==False:
+            if not os.path.isdir(self.project.path_result_main):
                 self.showMessage('w', 'This dataset has not been analysed. Please run analysis.')
             else:
-                self.updateLog('Data path set to '+data_path)
+                self.updateLog('Data path set to '+ self.data_path)
                 self._showDFLSPResult()
                 self.window.DFLSP_tagButton.setEnabled(True)
                 self.window.DFLSP_oaButton.setEnabled(True)
@@ -191,8 +189,6 @@ class MainWindow(QMainWindow):
             return 0
         else:
             self.data_path = data_path
-            self.window.DFLSP_pathEntry.setText(self.data_path)
-            self.updateLog('Data path set to '+data_path)
 
         # Get the method for analysis
         self.method = self.window.DFLSP_methodSelector.currentText()
@@ -222,6 +218,10 @@ class MainWindow(QMainWindow):
             self.updateLog('Estimated particle size set as '+str(self.size)+' pixels.')
 
         self.parameters = '_' + self.method + '_' + str(self.threshold) + '_' + str(self.size)
+        self.data_path = self.data_path.replace('_results' + self.parameters, '')
+        self.window.DFLSP_pathEntry.setText(self.data_path)
+        self.updateLog('Data path set to '+data_path)
+
         self.project = DiffractionLimitedAnalysis(self.data_path, self.parameters) # Creat DiffractionLimitedAnalysis object
         if self.project.error == 1:
             return 1
@@ -1092,7 +1092,7 @@ class TagDataPopup(QWidget):
         self.window = loader.load(ui_file, self.mainWindow)
 
         self.window.loadButton.clicked.connect(self.clickLoadButton)
-        self.window.buttonBox.button(self.window.buttonBox.Apply).clicked.connect(self._applyTags)
+        self.window.buttonBox.button(self.window.buttonBox.StandardButton.Apply).clicked.connect(self._applyTags)
 
         ui_file.close()
         if not self.window:
@@ -1152,7 +1152,7 @@ class GroupingPopup(QWidget):
         loader = QUiLoader()
 
         self.window = loader.load(ui_file, self.mainWindow)
-        self.window.buttonBox.button(self.window.buttonBox.Apply).clicked.connect(self.clickedApply)
+        self.window.buttonBox.button(self.window.buttonBox.StandardButton.Apply).clicked.connect(self.clickedApply)
 
         rm_list = ['NoOfFoV', 'ParticlePerFoV', 'MeanSize', 'MeanIntegrInt', 'MeanIntPerArea']
         df = pd.read_csv(self.parent.project.path_result_main + '/Summary.csv')
@@ -1194,7 +1194,7 @@ class GroupingPopup(QWidget):
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle('Warning')
             msgBox.setText('Cannot select the same condition.')
-            returnValue = msgBox.exec_()
+            returnValue = msgBox.exec()
         else:
             self.output.emit(self.options[experimentSelection], self.options[xaxisSelection])
             self.finished.emit()
@@ -1411,8 +1411,8 @@ class SplitFolderPopup(QWidget):
 
         loader = QUiLoader()
         self.window = loader.load(ui_file, self.mainWindow)
-        self.window.buttonBox.button(self.window.buttonBox.Ok).clicked.connect(self._folderSplitter)
-        self.window.buttonBox.button(self.window.buttonBox.Cancel).clicked.connect(self._cancel)
+        self.window.buttonBox.button(self.window.buttonBox.StandardButton.Ok).clicked.connect(self._folderSplitter)
+        self.window.buttonBox.button(self.window.buttonBox.StandardButton.Cancel).clicked.connect(self._cancel)
         self.window.moreConditionButton.clicked.connect(self._moreCondition)
         self.window.conditionWidgetLayout = QGridLayout(self.window.conditionWidget)
 
@@ -1453,14 +1453,14 @@ class SplitFolderPopup(QWidget):
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle('Warning')
             msgBox.setText('No path was specified.')
-            returnValue = msgBox.exec_()
+            returnValue = msgBox.exec()
             return 0
         elif os.path.isdir(job_path) != True:
             msgBox = QMessageBox(self.mainWindow)
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle('Warning')
             msgBox.setText('Path input was invalid.')
-            returnValue = msgBox.exec_()
+            returnValue = msgBox.exec()
             return 0
         else:
             job_dict = {}
@@ -1490,4 +1490,4 @@ if __name__ == "__main__":
     app.setWindowIcon(QIcon(os.path.join(os.path.dirname(__file__), "UI_form/lulu.ico")))
     main_window = MainWindow()
     main_window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
